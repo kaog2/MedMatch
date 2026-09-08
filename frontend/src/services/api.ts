@@ -1,0 +1,18 @@
+import { useAuthStore } from '../store';
+
+const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+
+export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = useAuthStore.getState().accessToken;
+  const response = await fetch(`${baseUrl}/api${path}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
+  });
+  if (!response.ok) throw new Error((await response.json().catch(() => ({ error: response.statusText }))).error ?? 'Request failed');
+  return response.status === 204 ? (undefined as T) : response.json();
+}
+
+export type Clinic = { id: string; name: string; type: string; specialty: string; treatmentsOffered: string[]; address?: string; city: string; country: string; contactInfo?: string; isVerified: boolean };
+export type Review = { id: string; clinicId?: string; doctorId?: string; rating: number; title: string; body: string; tags: string[]; isAnonymous: boolean; authorDisplayName: string; authorUserId?: string; createdAt: string };
+export type Profile = { displayMode: 'Anonymous' | 'Pseudonym' | 'RealName'; pseudonym?: string; realName?: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string[]; ageRange?: string; bio?: string; languages: string[] };
+export type Consent = { showProfilePublicly: boolean; clinicsContactMe: boolean; patientsContactMe: boolean; dataForSearch: boolean; version: number; updatedAt: string };

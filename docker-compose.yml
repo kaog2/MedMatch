@@ -1,0 +1,109 @@
+services:
+  # ─────────────────────────────────────────────────────────────
+  # Database: PostgreSQL
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: medmatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medmatch
+      POSTGRES_PASSWORD: ChangeMe!
+      POSTGRES_DB: medmatch
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - medmatch-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medmatch -d medmatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # Backend: .NET Core Web API
+  # ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medmatch-backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      # PostgreSQL connection
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: medmatch
+      DATABASE_USER: medmatch
+      DATABASE_PASSWORD: ChangeMe!
+
+      # JWT / Auth
+      JWT_SECRET: ChangeMeToo!
+      JWT_ISSUER: medmatch
+      JWT_AUDIENCE: medmatch-client
+
+      # CORS / Frontend
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - medmatch-network
+
+  # ─────────────────────────────────────────────────────────────
+  # Frontend: React + TypeScript (Vite or CRA)
+  # ─────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=development
+    container_name: medmatch-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:5000
+      # If using Next.js instead of Vite, change to NEXT_PUBLIC_API_URL
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - medmatch-network
+    volumes:
+      - ./frontend:/app        # Source code
+      - /app/node_modules      # To avoid overwriting node_modules from container
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+  # ─────────────────────────────────────────────────────────────
+  # Reverse proxy: Nginx
+  # ─────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: medmatch-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      # In production, add 443 for HTTPS
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - medmatch-network
+
+networks:
+  medmatch-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
