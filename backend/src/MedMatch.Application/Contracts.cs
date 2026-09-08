@@ -8,6 +8,8 @@ public record RefreshRequest(string RefreshToken);
 public record AuthResponse(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, UserRole Role);
 public record PatientProfileDto(DisplayMode DisplayMode, string? Pseudonym, string? RealName, string? City, string? Country, string[] Diagnoses, string[] Interventions, string[] Symptoms, string? AgeRange, string? Bio, string[] Languages);
 public record ConsentSettingsDto(bool ShowProfilePublicly, bool ClinicsContactMe, bool PatientsContactMe, bool DataForSearch, int Version, DateTimeOffset UpdatedAt);
+public record PatientDirectoryDto(Guid UserId, string DisplayName, string? City, string? Country, string[] Diagnoses, string[] Interventions, string[] Symptoms, string? Bio, string[] Languages);
+public record ConnectionRequest(string Message);
 public record ClinicDto(Guid Id, string Name, string Type, string Specialty, string[] TreatmentsOffered, string? Address, string City, string Country, string? ContactInfo, bool IsVerified);
 public record DoctorDto(Guid Id, Guid? ClinicId, string Name, string Specialty, string[] TreatmentsOffered, string? City, string? Country, string? ContactInfo, bool IsVerified);
 public record ReviewDto(Guid Id, Guid? ClinicId, Guid? DoctorId, int Rating, string Title, string Body, string[] Tags, bool IsAnonymous, string AuthorDisplayName, Guid? AuthorUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

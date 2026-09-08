@@ -16,3 +16,4 @@ export type Clinic = { id: string; name: string; type: string; specialty: string
 export type Review = { id: string; clinicId?: string; doctorId?: string; rating: number; title: string; body: string; tags: string[]; isAnonymous: boolean; authorDisplayName: string; authorUserId?: string; createdAt: string };
 export type Profile = { displayMode: 'Anonymous' | 'Pseudonym' | 'RealName'; pseudonym?: string; realName?: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string[]; ageRange?: string; bio?: string; languages: string[] };
 export type Consent = { showProfilePublicly: boolean; clinicsContactMe: boolean; patientsContactMe: boolean; dataForSearch: boolean; version: number; updatedAt: string };
+export type Person = { userId: string; displayName: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string[]; bio?: string; languages: string[] };
