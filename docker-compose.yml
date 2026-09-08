@@ -73,7 +73,7 @@ services:
       VITE_API_URL: http://localhost:5000
       # If using Next.js instead of Vite, change to NEXT_PUBLIC_API_URL
     ports:
-      - "3000:3000"
+      - "3000:5173"
     depends_on:
       - backend
     networks:
