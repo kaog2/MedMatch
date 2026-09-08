@@ -87,6 +87,45 @@ Important frontend paths:
 - `src/pages/PeopleSearch.tsx`: consent-filtered patient search and connection requests
 - `src/pages/PatientProfile.tsx`: profile and privacy settings
 
+## Backend Code Organization
+
+The backend follows a lightweight Clean Architecture layout:
+
+```text
+MedMatch.Domain/
+  Entities.cs                         # Domain entities and enums
+
+MedMatch.Application/
+  Contracts/
+    AuthContracts.cs                  # Authentication request/response records
+    ProfileContracts.cs               # Profile and consent records
+    ClinicContracts.cs                # Clinic and doctor records
+    ReviewContracts.cs                # Review records
+    PeopleContracts.cs                # Patient directory records
+    IAuthService.cs                    # Authentication service contract
+    ITokenService.cs                   # Token service contract
+    IPatientProfileService.cs          # Profile service contract
+    IClinicSearchService.cs            # Clinic search contract
+    IReviewService.cs                  # Review service contract
+    IConsentService.cs                 # Consent service contract
+
+MedMatch.Infrastructure/
+  Services/
+    AuthService.cs                    # IAuthService implementation
+    TokenService.cs                   # ITokenService implementation
+    PasswordHasher.cs                 # PBKDF2 password hashing
+  Persistence/                        # EF Core context, mappings, migrations
+
+MedMatch.Api/
+  Program.cs                          # Composition root and route registration
+  Mapping/DtoMapper.cs                 # Entity/DTO conversions
+  Queries/ReviewQueries.cs            # Reusable review query construction
+  Security/UserIdentity.cs             # Claims-to-user identity handling
+  Configuration/ConfigurationExtensions.cs
+```
+
+Dependencies point inward: the Application project defines service contracts, Infrastructure implements them, and the API composes them through dependency injection. Authentication no longer creates users, hashes passwords, or issues tokens inside `Program.cs`.
+
 The frontend uses `VITE_API_URL` for direct API calls. Through the normal Docker setup it points to `http://localhost:5000`.
 
 ## Backend

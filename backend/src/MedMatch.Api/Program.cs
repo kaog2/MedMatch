@@ -1,32 +1,36 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
-using MedMatch.Application;
+using MedMatch.Application.Contracts;
 using MedMatch.Domain;
 using MedMatch.Infrastructure.Persistence;
 using MedMatch.Infrastructure.Services;
+using MedMatch.Api.Configuration;
+using static MedMatch.Api.Mapping.DtoMapper;
+using static MedMatch.Api.Queries.ReviewQueries;
+using static MedMatch.Api.Security.UserIdentity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = $"Host={Required("DATABASE_HOST")};Port={builder.Configuration["DATABASE_PORT"] ?? "5432"};Database={Required("DATABASE_NAME")};Username={Required("DATABASE_USER")};Password={Required("DATABASE_PASSWORD")}";
+var connectionString = $"Host={builder.Configuration.Required("DATABASE_HOST")};Port={builder.Configuration["DATABASE_PORT"] ?? "5432"};Database={builder.Configuration.Required("DATABASE_NAME")};Username={builder.Configuration.Required("DATABASE_USER")};Password={builder.Configuration.Required("DATABASE_PASSWORD")}";
 builder.Services.AddDbContext<MedMatchDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<PasswordHasher>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(builder.Configuration["FRONTEND_URL"] ?? "http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
 
-var jwtSecret = Required("JWT_SECRET");
+var jwtSecret = builder.Configuration.Required("JWT_SECRET");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true, ValidIssuer = Required("JWT_ISSUER"), ValidateAudience = true, ValidAudience = Required("JWT_AUDIENCE"),
+        ValidateIssuer = true, ValidIssuer = builder.Configuration.Required("JWT_ISSUER"), ValidateAudience = true, ValidAudience = builder.Configuration.Required("JWT_AUDIENCE"),
         ValidateLifetime = true, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)), ClockSkew = TimeSpan.FromSeconds(30)
     };
 });
@@ -47,29 +51,18 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 var api = app.MapGroup("/api");
 
-api.MapPost("/auth/register", async (RegisterRequest request, MedMatchDbContext db, TokenService tokens, CancellationToken ct) =>
+api.MapPost("/auth/register", async (RegisterRequest request, IAuthService auth, CancellationToken ct) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Email) || request.Password.Length < 8) return Results.BadRequest(new { error = "Email and a password of at least 8 characters are required." });
-    if (request.Role is UserRole.Admin) return Results.BadRequest(new { error = "Admin registration is not available." });
-    var email = request.Email.Trim().ToLowerInvariant();
-    if (await db.Users.AnyAsync(x => x.Email == email, ct)) return Results.Conflict(new { error = "An account with that email already exists." });
-    var user = new User { Email = email, Role = request.Role, PasswordHash = Passwords.Hash(request.Password), PatientProfile = request.Role == UserRole.Patient ? new PatientProfile() : null, ConsentSettings = new ConsentSettings() };
-    db.Users.Add(user); await db.SaveChangesAsync(ct); return Results.Ok(await IssueTokens(user, db, tokens, ct));
+    try { return Results.Ok(await auth.RegisterAsync(request, ct)); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+    catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); }
 }).AllowAnonymous();
 
-api.MapPost("/auth/login", async (LoginRequest request, MedMatchDbContext db, TokenService tokens, CancellationToken ct) =>
-{
-    var user = await db.Users.SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant(), ct);
-    if (user is null || !Passwords.Verify(request.Password, user.PasswordHash)) return Results.Unauthorized();
-    user.LastLogin = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Results.Ok(await IssueTokens(user, db, tokens, ct));
-}).AllowAnonymous();
+api.MapPost("/auth/login", async (LoginRequest request, IAuthService auth, CancellationToken ct) =>
+    (await auth.LoginAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
 
-api.MapPost("/auth/refresh", async (RefreshRequest request, MedMatchDbContext db, TokenService tokens, CancellationToken ct) =>
-{
-    var hash = TokenService.Hash(request.RefreshToken); var stored = await db.RefreshTokens.Include(x => x.User).SingleOrDefaultAsync(x => x.TokenHash == hash, ct);
-    if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt <= DateTimeOffset.UtcNow) return Results.Unauthorized();
-    stored.RevokedAt = DateTimeOffset.UtcNow; await db.SaveChangesAsync(ct); return Results.Ok(await IssueTokens(stored.User, db, tokens, ct));
-}).AllowAnonymous();
+api.MapPost("/auth/refresh", async (RefreshRequest request, IAuthService auth, CancellationToken ct) =>
+    (await auth.RefreshAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
 
 api.MapGet("/profile", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
@@ -145,22 +138,7 @@ api.MapPost("/people/{id:guid}/connection-requests", async (Guid id, ConnectionR
 
 app.Run();
 
-string Required(string key) => builder.Configuration[key] ?? throw new InvalidOperationException($"{key} is required.");
-static Guid UserId(ClaimsPrincipal user) => Guid.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? throw new UnauthorizedAccessException());
-static async Task<AuthResponse> IssueTokens(User user, MedMatchDbContext db, TokenService tokens, CancellationToken ct) { var (access, expires) = tokens.CreateAccessToken(user); var refresh = TokenService.CreateRefreshToken(); db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = TokenService.Hash(refresh), ExpiresAt = DateTimeOffset.UtcNow.AddDays(14) }); await db.SaveChangesAsync(ct); return new AuthResponse(access, refresh, expires, user.Role); }
-static PatientProfileDto ToProfileDto(PatientProfile p) => new(p.DisplayMode, p.Pseudonym, p.RealName, p.City, p.Country, p.Diagnoses, p.Interventions, p.Symptoms, p.AgeRange, p.Bio, p.Languages);
-static void ApplyProfile(PatientProfile p, PatientProfileDto d) { p.DisplayMode = d.DisplayMode; p.Pseudonym = d.Pseudonym; p.RealName = d.RealName; p.City = d.City; p.Country = d.Country; p.Diagnoses = d.Diagnoses ?? []; p.Interventions = d.Interventions ?? []; p.Symptoms = d.Symptoms ?? []; p.AgeRange = d.AgeRange; p.Bio = d.Bio; p.Languages = d.Languages ?? []; }
-static ConsentSettingsDto ToConsentDto(ConsentSettings c) => new(c.ShowProfilePublicly, c.ClinicsContactMe, c.PatientsContactMe, c.DataForSearch, c.Version, c.UpdatedAt);
-static ClinicDto ToClinicDto(Clinic c) => new(c.Id, c.Name, c.Type, c.Specialty, c.TreatmentsOffered, c.Address, c.City, c.Country, c.ContactInfo, c.IsVerified);
-static void ApplyClinic(Clinic c, ClinicDto d) { c.Name = d.Name; c.Type = d.Type; c.Specialty = d.Specialty; c.TreatmentsOffered = d.TreatmentsOffered ?? []; c.Address = d.Address; c.City = d.City; c.Country = d.Country; c.ContactInfo = d.ContactInfo; c.IsVerified = d.IsVerified; }
-static DoctorDto ToDoctorDto(Doctor d) => new(d.Id, d.ClinicId, d.Name, d.Specialty, d.TreatmentsOffered, d.City, d.Country, d.ContactInfo, d.IsVerified);
-static void ApplyDoctor(Doctor d, DoctorDto dto) { d.ClinicId = dto.ClinicId; d.Name = dto.Name; d.Specialty = dto.Specialty; d.TreatmentsOffered = dto.TreatmentsOffered ?? []; d.City = dto.City; d.Country = dto.Country; d.ContactInfo = dto.ContactInfo; d.IsVerified = dto.IsVerified; }
-static void ApplyReview(Review r, UpsertReviewRequest d) { r.ClinicId = d.ClinicId; r.DoctorId = d.DoctorId; r.Rating = d.Rating; r.Title = d.Title; r.Body = d.Body; r.Tags = d.Tags ?? []; r.IsAnonymous = d.IsAnonymous; r.AllowContactByPatients = d.AllowContactByPatients; r.AllowContactByClinics = d.AllowContactByClinics; r.UpdatedAt = DateTimeOffset.UtcNow; }
-static IQueryable<Review> ReviewQuery(MedMatchDbContext db, Guid? clinicId, Guid? doctorId) { var query = db.Reviews.AsNoTracking().Include(x => x.AuthorUser).ThenInclude(x => x.PatientProfile).AsQueryable(); if (clinicId is not null) query = query.Where(x => x.ClinicId == clinicId); if (doctorId is not null) query = query.Where(x => x.DoctorId == doctorId); return query.OrderByDescending(x => x.CreatedAt); }
-static ReviewDto ToReviewDto(Review review) { var p = review.AuthorUser.PatientProfile; var masked = review.IsAnonymous || p is null || p.DisplayMode == DisplayMode.Anonymous; var name = masked ? "Anonymous" : p!.DisplayMode == DisplayMode.Pseudonym && !string.IsNullOrWhiteSpace(p.Pseudonym) ? p.Pseudonym : !string.IsNullOrWhiteSpace(p!.RealName) ? p.RealName : "Patient"; return new(review.Id, review.ClinicId, review.DoctorId, review.Rating, review.Title, review.Body, review.Tags, masked, name, masked ? null : review.AuthorUserId, review.CreatedAt, review.UpdatedAt); }
 
-static class Passwords
-{
-    public static string Hash(string password) { var salt = RandomNumberGenerator.GetBytes(16); var key = Rfc2898DeriveBytes.Pbkdf2(password, salt, 210_000, HashAlgorithmName.SHA512, 32); return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(key)}"; }
-    public static bool Verify(string password, string value) { var parts = value.Split(':'); if (parts.Length != 2) return false; var salt = Convert.FromBase64String(parts[0]); var expected = Convert.FromBase64String(parts[1]); var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, 210_000, HashAlgorithmName.SHA512, 32); return CryptographicOperations.FixedTimeEquals(actual, expected); }
-}
+
+
+
