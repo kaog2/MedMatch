@@ -248,7 +248,7 @@ DATABASE_HOST=postgres
 DATABASE_NAME=medmatch
 DATABASE_USER=medmatch
 DATABASE_PASSWORD=ChangeMe!
-JWT_SECRET=ChangeMeToo!
+JWT_SECRET=ChangeMeToo-Development-Jwt-Key-32Chars!
 
 # Frontend
 NEXTAUTH_URL=http://localhost:3000

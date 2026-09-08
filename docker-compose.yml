@@ -43,12 +43,12 @@ services:
       DATABASE_PASSWORD: ChangeMe!
 
       # JWT / Auth
-      JWT_SECRET: ChangeMeToo!
+      JWT_SECRET: ChangeMeToo-Development-Jwt-Key-32Chars!
       JWT_ISSUER: medmatch
       JWT_AUDIENCE: medmatch-client
 
       # CORS / Frontend
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost
     ports:
       - "5000:8080"
     depends_on:
