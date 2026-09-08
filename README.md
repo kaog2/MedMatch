@@ -1,14 +1,18 @@
-# MedMatch – Social Network for Clinical Recommendations
+# MedMatch
 
-> A platform where patients share experiences and recommendations about clinics, doctors, and therapies, and can choose whether to remain anonymous or be contactable by other patients and/or clinics.
+> Find care with a little more confidence.
 
-**Note:** This is a work-in-progress project. It does not provide medical advice and does not replace professional care.
+MedMatch is a privacy-focused platform for discovering clinics and doctors through patient experiences. Patients can search the care directory, read reviews, manage how their profile appears, and optionally connect with other patients who have chosen to be discoverable.
+
+> **Project status:** MedMatch is an actively developed MVP. It is not a medical advice service and does not replace professional care.
+
+[Technical documentation](TECHNICAL_README.md) · [Report an issue](../../issues)
 
 ---
 
-## Product Vision
+## Why MedMatch
 
-MedMatch helps patients find suitable clinics and doctors for their specific condition (e.g., chronic lower back pain, post-prosthesis, Morbus Perthes, Schmerztherapie), based on real experiences from other users.
+Finding care is often a research problem before it becomes a healthcare appointment. MedMatch makes that research more useful by combining structured clinic information with lived experience, while keeping sharing and contact decisions in the hands of each user.
 
 - **Patients** can:
   - Search for clinics and doctors by specialty, symptom, city, and therapy type.
@@ -18,7 +22,7 @@ MedMatch helps patients find suitable clinics and doctors for their specific con
 
 - **Clinics and doctors** can:
   - Have a verified profile.
-  - (Optional) Search for patients who have explicitly marked that they are open to being contacted by clinics, with certain diagnoses or symptoms.
+  - Search for patients who have explicitly marked that they are open to being contacted by clinics, with certain diagnoses or symptoms.
 
 The main focus is **patient → clinic**, with the "clinics searching for patients" feature being optional and highly controlled.
 
@@ -28,7 +32,7 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
 
 ### For Patients
 
-- Secure registration and login (optional MFA).
+- Register and sign in with JWT-based authentication.
 - Patient profile with:
   - Diagnoses (e.g., Morbus Perthes, osteoarthritis).
   - Interventions (e.g., hip prosthesis).
@@ -41,10 +45,9 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
   - Tags (Schmerztherapie, post-prosthesis, lower back pain, etc.).
   - Anonymity option (anonymous / pseudonym / real name).
   - Option to allow contact by other patients and/or clinics.
-- Search for clinics and doctors:
-  - By specialty, city, therapy type.
-  - Filter by experiences from patients with similar diagnoses or symptoms.
-- Contact other patients (if they allow it) to ask more about their experience.
+- Search for clinics and doctors by specialty, city, and therapy type.
+- Search for other patients by diagnosis, symptom, or city when both search and contact consent are enabled.
+- Send a connection request without exposing private email addresses.
 
 ### For Clinics and Doctors
 
@@ -52,10 +55,7 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
   - Name, specialty, treatments offered.
   - Address, city, country.
   - Public contact information.
-- (Phase 2, optional) Search for patients who:
-  - Have explicitly marked "clinics can contact me".
-  - Have certain diagnoses, interventions, or symptoms.
-- Send secure messages to contactable patients from the platform.
+- Search for patients who explicitly allow clinic contact and search.
 
 ### Administration
 
@@ -71,16 +71,16 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
 ### Frontend
 
 - **React** + **TypeScript**
-- UI: **Material UI** or **Chakra UI**
+- UI: **Material UI**
 - State and data:
   - **React Query** for caching and API synchronization.
-  - **Zustand** or **Redux Toolkit** for global state.
-- Authentication: **NextAuth** or **Auth0** (with optional MFA).
+  - **Zustand** for authentication state.
+- Authentication: JWT access tokens and refresh tokens.
 
 ### Backend
 
-- **.NET Core** Web API
-- Database: **PostgreSQL** (recommended) or **MongoDB** (if NoSQL is preferred)
+- **ASP.NET Core** Web API on .NET 10
+- Database: **PostgreSQL**
 - ORM: **Entity Framework Core**
 - Authentication and authorization:
   - JWT + refresh tokens
@@ -90,14 +90,12 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
 
 - **Docker** + **Docker Compose** for local development.
 - **Nginx** as reverse proxy.
-- Deployment on **Azure** (App Service or AKS).
-- TLS, WAF, backups, and monitoring (Grafana, Prometheus, Loki, etc.).
 
 ---
 
-## Privacy and Compliance (GDPR)
+## Privacy And Safety
 
-The project handles **health data** (special category under GDPR Art. 9). The design follows **privacy by design** and **privacy by default** principles. [web:5][web:7][web:10][web:12][web:14]
+The project handles health-related information, so privacy is a core product requirement. The current implementation includes explicit contact/search consent, anonymous review display, pseudonyms, and role-based access control. A production release requires legal review, a DPIA, secure secret management, TLS, audit logging, retention policies, and a complete account export/deletion workflow.
 
 ### Key Principles
 
@@ -120,7 +118,7 @@ The project handles **health data** (special category under GDPR Art. 9). The de
   - Access auditing and activity logs.
   - Data retention and deletion policies.
 
-> **Important:** Before launching, it is recommended to review the implementation with a lawyer specialized in data protection and digital health in Germany/Europe. [web:5][web:10][web:12][web:14]
+> **Important:** MedMatch does not provide medical advice. Always consult a qualified healthcare professional for health decisions.
 
 ---
 
@@ -179,7 +177,7 @@ The project handles **health data** (special category under GDPR Art. 9). The de
 
 ---
 
-## Repository Structure (Suggested)
+## Repository Structure
 
 ```bash
 medmatch/
@@ -209,13 +207,10 @@ medmatch/
     nginx/
     scripts/
 
-  docs/
-    architecture.md
-    api-spec.md
-    privacy-policy.md
-    terms.md
-
-  README.md
+  infra/nginx/       # Reverse proxy configuration
+  docker-compose.yml # Local development stack
+  README.md          # Product overview
+  TECHNICAL_README.md
 ```
 
 ---
@@ -233,33 +228,14 @@ medmatch/
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/medmatch.git
+git clone https://github.com/<your-account>/medmatch.git
 cd medmatch
 ```
 
-2. Configure environment variables:
-
-Create a `.env` file in the root (or in `infra/`) with:
-
-```env
-# Backend
-ASPNETCORE_ENVIRONMENT=Development
-DATABASE_HOST=postgres
-DATABASE_NAME=medmatch
-DATABASE_USER=medmatch
-DATABASE_PASSWORD=ChangeMe!
-JWT_SECRET=ChangeMeToo-Development-Jwt-Key-32Chars!
-
-# Frontend
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=ChangeMeAsWell!
-API_URL=http://localhost:5000
-```
-
-3. Start the infrastructure with Docker Compose:
+2. Start the development stack:
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d
+docker compose up -d --build
 ```
 
 This should start:
@@ -271,9 +247,12 @@ This should start:
 
 4. Access the application:
 
-- Frontend: `http://localhost:3000`
+- Application: `http://localhost`
+- Frontend development server: `http://localhost:3000`
 - API: `http://localhost:5000`
-- (Optional) Adminer/pgAdmin to view the DB: `http://localhost:8080`
+- API health check: `http://localhost:5000/health`
+
+For architecture, API routes, database details, testing, and deployment notes, see [TECHNICAL_README.md](TECHNICAL_README.md).
 
 ---
 
@@ -285,19 +264,19 @@ This should start:
 - Patient profiles with anonymity and contact options.
 - CRUD for clinics and reviews.
 - Clinic search and filtering by tags/diagnoses/symptoms.
-- Privacy policy and consent texts (to be reviewed by a lawyer). [web:12][web:14]
+- Privacy policy and consent texts reviewed for the target deployment.
 
 ### Phase 2 – Messaging and Clinics (4–6 weeks)
 
 - Patient ↔ patient messaging (when the author allows it).
 - Verification of clinics and doctors.
 - Optional feature: clinics search for contactable patients.
-- Administration and moderation panel. [web:6][web:14]
+- Administration and moderation panel.
 
 ### Phase 3 – GDPR and Production
 
 - User data export and deletion.
-- Security audits, logs, and documented DPIA. [web:12][web:14][web:17]
+- Security audits, logs, and documented DPIA.
 - Security improvements, monitoring, and scaling on Azure.
 
 ---
