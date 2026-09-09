@@ -249,7 +249,7 @@ GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 
 Restart the stack after changing `.env`. Never commit OAuth secrets or credentials.
 
-Create the Mailcow mailbox before testing password registration. The development values use `noreply@kevdevs.org` as an example; replace `SMTP_PASSWORD` in `env.dev` with that mailbox's real password. The application uses Mailcow SMTP submission on port `587` with STARTTLS.
+Create the Mailcow mailbox before testing password registration. The development values use a mailbox such as `noreply@example.com`; replace `SMTP_PASSWORD` in `env.dev` with that mailbox's real password. The application uses Mailcow SMTP submission on port `587` with STARTTLS.
 
 This should start:
 

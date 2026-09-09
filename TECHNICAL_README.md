@@ -169,7 +169,7 @@ The backend requires these settings:
 | `JWT_AUDIENCE` | JWT audience claim |
 | `FRONTEND_URL` | Exact browser origin allowed by CORS, `http://localhost` through Nginx |
 | `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID used to validate Google ID tokens |
-| `SMTP_HOST` | Mailcow SMTP hostname, for example `mail.kevdevs.org` |
+| `SMTP_HOST` | Mailcow SMTP hostname, for example `mail.example.com` |
 | `SMTP_PORT` | SMTP submission port, normally `587` with STARTTLS |
 | `SMTP_USERNAME` | Full mailbox address used to send verification mail |
 | `SMTP_PASSWORD` | Mailbox password; keep it private |
@@ -319,8 +319,8 @@ The current Compose setup is intended for development. A production deployment s
 Harbor deployment is defined in `docker-compose.harbor.yml`. It pulls:
 
 ```text
-harbor.kevdevs.org/medmatch/backend:<tag>
-harbor.kevdevs.org/medmatch/frontend:<tag>
+registry.example.com/medmatch/backend:<tag>
+registry.example.com/medmatch/frontend:<tag>
 ```
 
 The Harbor Compose file does not run the repository Nginx service. Backend and frontend join the external Docker network `nginx_proxi_default`, which must already exist and must also be attached to the Nginx Proxy Manager container.
@@ -328,7 +328,7 @@ The Harbor Compose file does not run the repository Nginx service. Backend and f
 Build and push from Windows PowerShell:
 
 ```powershell
-docker login harbor.kevdevs.org
+docker login registry.example.com
 $env:GOOGLE_CLIENT_ID = "your-google-web-client-id.apps.googleusercontent.com"
 .\scripts\push-harbor.ps1 -Tag "2026.09.09.1"
 ```
