@@ -21,7 +21,7 @@ In Portainer:
 1. Open **Registries**.
 2. Choose **Add registry**.
 3. Select **Custom registry**.
-4. Registry URL: `harbor.kevdevs.org`.
+4. Registry URL: `harbor.your-domain.example`.
 5. Enter a Harbor robot account or deployment user with pull permission on the `medmatch` project.
 6. Save the registry.
 
@@ -60,14 +60,14 @@ JWT_ISSUER=medmatch
 JWT_AUDIENCE=medmatch-client
 FRONTEND_URL=https://your-domain.example
 GOOGLE_CLIENT_ID=<Google web client ID>
-SMTP_HOST=mail.kevdevs.org
+SMTP_HOST=mail.your-domain.example
 SMTP_PORT=587
-SMTP_USERNAME=noreply@kevdevs.org
+SMTP_USERNAME=noreply@your-domain.example
 SMTP_PASSWORD=<Mailcow mailbox password>
-SMTP_FROM_EMAIL=noreply@kevdevs.org
+SMTP_FROM_EMAIL=noreply@your-domain.example
 SMTP_FROM_NAME=MedMatch
 SMTP_ALLOW_INVALID_CERTIFICATE=false
-HARBOR_REGISTRY=harbor.kevdevs.org
+HARBOR_REGISTRY=harbor.your-domain.example
 HARBOR_PROJECT=medmatch
 IMAGE_TAG=2026.09.09.1
 ```
@@ -80,7 +80,7 @@ JWT_ISSUER=medmatch
 JWT_AUDIENCE=medmatch-client
 SMTP_PORT=587
 SMTP_FROM_NAME=MedMatch
-HARBOR_REGISTRY=harbor.kevdevs.org
+HARBOR_REGISTRY=harbor.your-domain.example
 HARBOR_PROJECT=medmatch
 IMAGE_TAG=latest
 ```
@@ -92,15 +92,15 @@ Never set `SMTP_ALLOW_INVALID_CERTIFICATE=true` in production. Renew the Mailcow
 Click **Deploy the stack**. Portainer should pull:
 
 ```text
-harbor.kevdevs.org/medmatch/backend:<IMAGE_TAG>
-harbor.kevdevs.org/medmatch/frontend:<IMAGE_TAG>
+harbor.your-domain.example/medmatch/backend:<IMAGE_TAG>
+harbor.your-domain.example/medmatch/frontend:<IMAGE_TAG>
 ```
 
 The stack exposes no host ports for the application containers. They are reachable through the shared Docker network only.
 
 ## 6. Configure Nginx Proxy Manager
 
-Create a Proxy Host for the public hostname, for example `medmatch.kevdevs.org`:
+Create a Proxy Host for the public hostname, for example `medmatch.your-domain.example`:
 
 - Scheme: `http`
 - Forward hostname/IP: `medmatch-frontend`
@@ -128,7 +128,21 @@ Check in Portainer:
 
 When publishing a new release:
 
-1. Build and push a new tag with `scripts/push-harbor.ps1`.
+1. Build and push a new version tag with `scripts/push-harbor.ps1`.
 2. Change `IMAGE_TAG` in Portainer.
 3. Redeploy the stack.
 4. Keep the previous tag available for rollback.
+
+Without `-Tag`, the script generates a UTC version tag and also updates `latest`:
+
+```powershell
+.\scripts\push-harbor.ps1
+```
+
+You can provide an explicit version tag:
+
+```powershell
+.\scripts\push-harbor.ps1 -Tag "2026.09.09.2"
+```
+
+Version tags are preserved. Only the `latest` convenience tag moves forward.

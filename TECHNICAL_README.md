@@ -330,10 +330,10 @@ Build and push from Windows PowerShell:
 ```powershell
 docker login registry.example.com
 $env:GOOGLE_CLIENT_ID = "your-google-web-client-id.apps.googleusercontent.com"
-.\scripts\push-harbor.ps1 -Tag "2026.09.09.1"
+\.\scripts\push-harbor.ps1 -Tag "2026.09.09.2"
 ```
 
-The script builds the backend for `linux/amd64`, builds the frontend using the production Nginx stage, and pushes both images. The production frontend uses same-origin `/api`, so Nginx Proxy Manager should route both paths on the same hostname:
+The script builds the backend and frontend for `linux/amd64` and `linux/arm64`, pushes the explicit version tag, and also updates `latest`. The production frontend uses same-origin `/api`, so Nginx Proxy Manager should route both paths on the same hostname:
 
 | Proxy path | Target on `nginx_proxi_default` |
 | --- | --- |
@@ -348,7 +348,7 @@ docker compose -f docker-compose.harbor.yml --env-file .env pull
 docker compose -f docker-compose.harbor.yml --env-file .env up -d
 ```
 
-Set `IMAGE_TAG` in `.env` to the exact tag you pushed. The external network must exist before startup:
+Set `IMAGE_TAG` in `.env` to the exact version tag you pushed, rather than `latest`, for rollback-safe deployment. The external network must exist before startup:
 
 ```powershell
 docker network create nginx_proxi_default
