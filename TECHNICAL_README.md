@@ -314,6 +314,48 @@ The current Compose setup is intended for development. A production deployment s
 5. Add backups, health monitoring, structured logs, alerting, and migration controls.
 6. Complete GDPR documentation, retention rules, export/deletion workflows, moderation, and legal review for health data.
 
+### Harbor And Nginx Proxy Manager
+
+Harbor deployment is defined in `docker-compose.harbor.yml`. It pulls:
+
+```text
+harbor.kevdevs.org/medmatch/backend:<tag>
+harbor.kevdevs.org/medmatch/frontend:<tag>
+```
+
+The Harbor Compose file does not run the repository Nginx service. Backend and frontend join the external Docker network `nginx_proxi_default`, which must already exist and must also be attached to the Nginx Proxy Manager container.
+
+Build and push from Windows PowerShell:
+
+```powershell
+docker login harbor.kevdevs.org
+$env:GOOGLE_CLIENT_ID = "your-google-web-client-id.apps.googleusercontent.com"
+.\scripts\push-harbor.ps1 -Tag "2026.09.09.1"
+```
+
+The script builds the backend for `linux/amd64`, builds the frontend using the production Nginx stage, and pushes both images. The production frontend uses same-origin `/api`, so Nginx Proxy Manager should route both paths on the same hostname:
+
+| Proxy path | Target on `nginx_proxi_default` |
+| --- | --- |
+| `/` | `http://medmatch-frontend:80` |
+| `/api` | `http://medmatch-backend:8080` |
+
+Deploy the pushed images with the private production environment file:
+
+```powershell
+docker network inspect nginx_proxi_default
+docker compose -f docker-compose.harbor.yml --env-file .env pull
+docker compose -f docker-compose.harbor.yml --env-file .env up -d
+```
+
+Set `IMAGE_TAG` in `.env` to the exact tag you pushed. The external network must exist before startup:
+
+```powershell
+docker network create nginx_proxi_default
+```
+
+Do not publish backend or frontend ports directly to the Internet. Nginx Proxy Manager should be the only public entry point and should provide HTTPS.
+
 ## Known Gaps
 
 - No inbox or threaded messaging UI yet; connection requests are persisted for the next messaging increment.

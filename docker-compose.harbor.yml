@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: medmatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER must be set}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      POSTGRES_DB: ${DATABASE_NAME:-medmatch}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - medmatch-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-medmatch} -d ${DATABASE_NAME:-medmatch}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ${HARBOR_REGISTRY:-harbor.kevdevs.org}/${HARBOR_PROJECT:-medmatch}/backend:${IMAGE_TAG:-latest}
+    container_name: medmatch-backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-medmatch}
+      DATABASE_USER: ${DATABASE_USER:?DATABASE_USER must be set}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_ISSUER: ${JWT_ISSUER:-medmatch}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-medmatch-client}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:?SMTP_USERNAME must be set}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD must be set}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?SMTP_FROM_EMAIL must be set}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-MedMatch}
+      SMTP_ALLOW_INVALID_CERTIFICATE: ${SMTP_ALLOW_INVALID_CERTIFICATE:-false}
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - medmatch-network
+      - nginx_proxi_default
+
+  frontend:
+    image: ${HARBOR_REGISTRY:-harbor.kevdevs.org}/${HARBOR_PROJECT:-medmatch}/frontend:${IMAGE_TAG:-latest}
+    container_name: medmatch-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - medmatch-network
+      - nginx_proxi_default
+
+networks:
+  medmatch-network:
+    driver: bridge
+  nginx_proxi_default:
+    external: true
+
+volumes:
+  postgres_data:

@@ -17,11 +17,21 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
 
         var email = request.Email.Trim().ToLowerInvariant();
         if (await db.Users.AnyAsync(x => x.Email == email, cancellationToken)) throw new InvalidOperationException("An account with that email already exists.");
-        var user = new User { Email = email, Role = request.Role, PasswordHash = passwords.Hash(request.Password), PatientProfile = request.Role == UserRole.Patient ? new PatientProfile() : null, ConsentSettings = new ConsentSettings(), EmailConfirmed = false };
-        db.Users.Add(user);
-        await db.SaveChangesAsync(cancellationToken);
-        await SendVerificationEmailAsync(user, cancellationToken);
-        return new RegistrationResult(true);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var user = new User { Email = email, Role = request.Role, PasswordHash = passwords.Hash(request.Password), PatientProfile = request.Role == UserRole.Patient ? new PatientProfile() : null, ConsentSettings = new ConsentSettings(), EmailConfirmed = false };
+            db.Users.Add(user);
+            await db.SaveChangesAsync(cancellationToken);
+            await SendVerificationEmailAsync(user, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new RegistrationResult(true);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
