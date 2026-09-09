@@ -40,11 +40,19 @@ Nginx :80
 
 ### Start the stack
 
-From the repository root:
+From the repository root, use `env.dev` for local development:
 
 ```bash
-docker compose up -d --build
+docker compose --env-file env.dev up -d --build
 ```
+
+For a production-style run, use the private `.env` file:
+
+```bash
+docker compose --env-file .env up -d --build
+```
+
+The Compose file does not automatically switch between these files based on `ASPNETCORE_ENVIRONMENT`; choose the file explicitly with `--env-file`. `env.dev` sets `ASPNETCORE_ENVIRONMENT=Development`, while `.env` sets `ASPNETCORE_ENVIRONMENT=Production`.
 
 Useful commands:
 
@@ -160,6 +168,14 @@ The backend requires these settings:
 | `JWT_ISSUER` | JWT issuer claim |
 | `JWT_AUDIENCE` | JWT audience claim |
 | `FRONTEND_URL` | Exact browser origin allowed by CORS, `http://localhost` through Nginx |
+| `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID used to validate Google ID tokens |
+| `SMTP_HOST` | Mailcow SMTP hostname, for example `mail.kevdevs.org` |
+| `SMTP_PORT` | SMTP submission port, normally `587` with STARTTLS |
+| `SMTP_USERNAME` | Full mailbox address used to send verification mail |
+| `SMTP_PASSWORD` | Mailbox password; keep it private |
+| `SMTP_FROM_EMAIL` | Sender address, normally the same Mailcow mailbox |
+| `SMTP_FROM_NAME` | Sender display name |
+| `SMTP_ALLOW_INVALID_CERTIFICATE` | Development-only escape hatch for expired/self-signed SMTP certificates; keep `false` in production |
 
 The JWT secret must be at least 16 bytes for HS256. Use a substantially longer randomly generated key in production.
 
@@ -174,8 +190,13 @@ All application endpoints are under `/api`.
 | `POST` | `/api/auth/register` | Public |
 | `POST` | `/api/auth/login` | Public |
 | `POST` | `/api/auth/refresh` | Public |
+| `POST` | `/api/auth/google` | Public; requires a configured Google client ID |
 
 Registration creates a patient profile and consent record for patient accounts. Successful registration and login return access and refresh tokens.
+
+Google authentication uses Google Identity Services in the frontend. The backend validates the returned ID token with `Google.Apis.Auth`, checks the configured audience and verified email claim, then links to an existing account by normalized email or creates a new patient account. Google does not receive the MedMatch password, and the Google credential is not persisted. This flow does not use the OAuth client secret; keep that secret private for any future server-side OAuth flow and never expose it as a `VITE_*` variable.
+
+Password registration creates an unconfirmed account and sends a one-time link through Mailcow SMTP. The link points to `/verify-email?token=...`, expires after 24 hours, is stored only as a hash, and can be used once. Existing accounts from before this feature are grandfathered as confirmed by the migration.
 
 ### Profiles and consent
 

@@ -12,10 +12,23 @@ public sealed class User
     public UserRole Role { get; set; } = UserRole.Patient;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLogin { get; set; }
+    public bool EmailConfirmed { get; set; }
     public PatientProfile? PatientProfile { get; set; }
     public ConsentSettings? ConsentSettings { get; set; }
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } = new List<EmailVerificationToken>();
+}
+
+public sealed class EmailVerificationToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public string TokenHash { get; set; } = string.Empty;
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? UsedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class PatientProfile

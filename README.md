@@ -34,6 +34,7 @@ The main focus is **patient → care provider**, with provider-to-patient discov
 ### For Patients
 
 - Register and sign in with JWT-based authentication.
+- Sign up or sign in with Google when Google OAuth is configured.
 - Patient profile with:
   - Diagnoses (e.g., Morbus Perthes, osteoarthritis).
   - Interventions (e.g., hip prosthesis).
@@ -239,6 +240,16 @@ cd medmatch
 ```bash
 docker compose up -d --build
 ```
+
+Google sign-in is optional. To enable it, create a Google OAuth web client, add `http://localhost` as an authorized JavaScript origin, and set this value in `env.dev`:
+
+```env
+GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
+```
+
+Restart the stack after changing `.env`. Never commit OAuth secrets or credentials.
+
+Create the Mailcow mailbox before testing password registration. The development values use `noreply@kevdevs.org` as an example; replace `SMTP_PASSWORD` in `env.dev` with that mailbox's real password. The application uses Mailcow SMTP submission on port `587` with STARTTLS.
 
 This should start:
 

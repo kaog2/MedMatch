@@ -7,9 +7,9 @@ services:
     container_name: medmatch-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: medmatch
-      POSTGRES_PASSWORD: ChangeMe!
-      POSTGRES_DB: medmatch
+      POSTGRES_USER: ${DATABASE_USER:-medmatch}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      POSTGRES_DB: ${DATABASE_NAME:-medmatch}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -32,23 +32,31 @@ services:
     container_name: medmatch-backend
     restart: unless-stopped
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
 
       # PostgreSQL connection
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: medmatch
-      DATABASE_USER: medmatch
-      DATABASE_PASSWORD: ChangeMe!
+      DATABASE_HOST: ${DATABASE_HOST:-postgres}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-medmatch}
+      DATABASE_USER: ${DATABASE_USER:-medmatch}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
 
       # JWT / Auth
-      JWT_SECRET: ChangeMeToo-Development-Jwt-Key-32Chars!
-      JWT_ISSUER: medmatch
-      JWT_AUDIENCE: medmatch-client
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_ISSUER: ${JWT_ISSUER:-medmatch}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-medmatch-client}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
 
       # CORS / Frontend
-      FRONTEND_URL: http://localhost
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:?SMTP_USERNAME must be set}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD must be set}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-MedMatch}
+      SMTP_ALLOW_INVALID_CERTIFICATE: ${SMTP_ALLOW_INVALID_CERTIFICATE:-false}
     ports:
       - "5000:8080"
     depends_on:
@@ -69,8 +77,9 @@ services:
     container_name: medmatch-frontend
     restart: unless-stopped
     environment:
-      NODE_ENV: development
-      VITE_API_URL: http://localhost:5000
+      NODE_ENV: ${NODE_ENV:-production}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # If using Next.js instead of Vite, change to NEXT_PUBLIC_API_URL
     ports:
       - "3000:5173"

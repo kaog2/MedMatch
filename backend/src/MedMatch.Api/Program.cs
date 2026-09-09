@@ -20,6 +20,7 @@ builder.Services.AddDbContext<MedMatchDbContext>(options => options.UseNpgsql(co
 builder.Services.AddScoped<PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -53,16 +54,25 @@ var api = app.MapGroup("/api");
 
 api.MapPost("/auth/register", async (RegisterRequest request, IAuthService auth, CancellationToken ct) =>
 {
-    try { return Results.Ok(await auth.RegisterAsync(request, ct)); }
+    try { return Results.Accepted("/api/auth/login", await auth.RegisterAsync(request, ct)); }
     catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
     catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); }
 }).AllowAnonymous();
 
 api.MapPost("/auth/login", async (LoginRequest request, IAuthService auth, CancellationToken ct) =>
-    (await auth.LoginAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
+{
+    try { return (await auth.LoginAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized(); }
+    catch (InvalidOperationException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
+}).AllowAnonymous();
 
 api.MapPost("/auth/refresh", async (RefreshRequest request, IAuthService auth, CancellationToken ct) =>
     (await auth.RefreshAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
+
+api.MapPost("/auth/google", async (GoogleLoginRequest request, IAuthService auth, CancellationToken ct) =>
+    (await auth.LoginWithGoogleAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
+
+api.MapPost("/auth/verify-email", async (VerifyEmailRequest request, IAuthService auth, CancellationToken ct) =>
+    await auth.VerifyEmailAsync(request, ct) ? Results.Ok(new { verified = true }) : Results.BadRequest(new { error = "This verification link is invalid or expired." })).AllowAnonymous();
 
 api.MapGet("/profile", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {

@@ -13,6 +13,7 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -48,3 +48,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
 {
     public void Configure(EntityTypeBuilder<RefreshToken> builder) { builder.ToTable("refresh_tokens"); builder.HasKey(x => x.Id); builder.Property(x => x.TokenHash).HasMaxLength(128).IsRequired(); builder.HasIndex(x => x.TokenHash).IsUnique(); builder.HasOne(x => x.User).WithMany(x => x.RefreshTokens).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade); }
 }
+public sealed class EmailVerificationTokenConfiguration : IEntityTypeConfiguration<EmailVerificationToken>
+{
+    public void Configure(EntityTypeBuilder<EmailVerificationToken> builder) { builder.ToTable("email_verification_tokens"); builder.HasKey(x => x.Id); builder.Property(x => x.TokenHash).HasMaxLength(128).IsRequired(); builder.HasIndex(x => x.TokenHash).IsUnique(); builder.HasOne(x => x.User).WithMany(x => x.EmailVerificationTokens).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade); }
+}
