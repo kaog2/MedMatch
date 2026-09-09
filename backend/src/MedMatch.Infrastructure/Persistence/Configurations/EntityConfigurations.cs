@@ -52,3 +52,26 @@ public sealed class EmailVerificationTokenConfiguration : IEntityTypeConfigurati
 {
     public void Configure(EntityTypeBuilder<EmailVerificationToken> builder) { builder.ToTable("email_verification_tokens"); builder.HasKey(x => x.Id); builder.Property(x => x.TokenHash).HasMaxLength(128).IsRequired(); builder.HasIndex(x => x.TokenHash).IsUnique(); builder.HasOne(x => x.User).WithMany(x => x.EmailVerificationTokens).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade); }
 }
+public sealed class DiagnosisTagConfiguration : IEntityTypeConfiguration<DiagnosisTag>
+{
+    public void Configure(EntityTypeBuilder<DiagnosisTag> builder) { builder.ToTable("diagnosis_tags"); builder.HasKey(x => x.Id); builder.Property(x => x.Name).HasMaxLength(200).IsRequired(); builder.Property(x => x.Slug).HasMaxLength(200).IsRequired(); builder.HasIndex(x => x.Slug).IsUnique(); builder.HasIndex(x => x.Name); }
+}
+public sealed class PatientDiagnosisTagConfiguration : IEntityTypeConfiguration<PatientDiagnosisTag>
+{
+    public void Configure(EntityTypeBuilder<PatientDiagnosisTag> builder)
+    {
+        builder.ToTable("patient_diagnosis_tags"); builder.HasKey(x => new { x.UserId, x.DiagnosisTagId });
+        builder.HasOne(x => x.Patient).WithMany(x => x.DiagnosisTags).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.DiagnosisTag).WithMany(x => x.Patients).HasForeignKey(x => x.DiagnosisTagId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+public sealed class MatchNotificationConfiguration : IEntityTypeConfiguration<MatchNotification>
+{
+    public void Configure(EntityTypeBuilder<MatchNotification> builder)
+    {
+        builder.ToTable("match_notifications"); builder.HasKey(x => x.Id); builder.Property(x => x.SharedDiagnoses).HasColumnType("text[]");
+        builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.UserId, x.MatchedUserId }).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.IsRead });
+    }
+}

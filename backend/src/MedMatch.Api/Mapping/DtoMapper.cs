@@ -10,8 +10,31 @@ public static class DtoMapper
     public static void ApplyProfile(PatientProfile profile, PatientProfileDto dto)
     {
         profile.DisplayMode = dto.DisplayMode; profile.Pseudonym = dto.Pseudonym; profile.RealName = dto.RealName; profile.City = dto.City; profile.Country = dto.Country;
-        profile.Diagnoses = dto.Diagnoses ?? []; profile.Interventions = dto.Interventions ?? []; profile.Symptoms = dto.Symptoms ?? []; profile.AgeRange = dto.AgeRange; profile.Bio = dto.Bio; profile.Languages = dto.Languages ?? [];
+        profile.Diagnoses = (dto.Diagnoses ?? []).Select(CleanTagDisplay).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); profile.Interventions = dto.Interventions ?? []; profile.Symptoms = dto.Symptoms ?? []; profile.AgeRange = dto.AgeRange; profile.Bio = dto.Bio; profile.Languages = dto.Languages ?? [];
     }
+
+    public static string CleanTagDisplay(string value)
+    {
+        var trimmed = value.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return string.Empty;
+        if (trimmed.Any(char.IsUpper)) return trimmed;
+        return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(trimmed);
+    }
+
+    public static string NormalizeTag(string value) => value.Trim().ToLowerInvariant();
+
+    public static string ToSlug(string value)
+    {
+        var normalized = NormalizeTag(value);
+        return string.Concat(normalized.Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
+    }
+
+    public static DiagnosisTagDto ToDiagnosisTagDto(DiagnosisTag tag) => new(tag.Id, tag.Name, tag.UsageCount);
+
+    public static string DisplayName(PatientProfile profile) =>
+        profile.DisplayMode == DisplayMode.Pseudonym && !string.IsNullOrWhiteSpace(profile.Pseudonym) ? profile.Pseudonym! :
+        profile.DisplayMode == DisplayMode.RealName && !string.IsNullOrWhiteSpace(profile.RealName) ? profile.RealName! :
+        "MedMatch member";
 
     public static ConsentSettingsDto ToConsentDto(ConsentSettings settings) => new(settings.ShowProfilePublicly, settings.ClinicsContactMe, settings.PatientsContactMe, settings.DataForSearch, settings.Version, settings.UpdatedAt);
     public static ClinicDto ToClinicDto(Clinic clinic) => new(clinic.Id, clinic.Name, clinic.Type, clinic.Specialty, clinic.TreatmentsOffered, clinic.Address, clinic.City, clinic.Country, clinic.ContactInfo, clinic.PublicWebsiteUrl, clinic.PublicationConsentGranted, clinic.IsVerified);

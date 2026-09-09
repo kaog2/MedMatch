@@ -14,6 +14,9 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
+    public DbSet<DiagnosisTag> DiagnosisTags => Set<DiagnosisTag>();
+    public DbSet<PatientDiagnosisTag> PatientDiagnosisTags => Set<PatientDiagnosisTag>();
+    public DbSet<MatchNotification> MatchNotifications => Set<MatchNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

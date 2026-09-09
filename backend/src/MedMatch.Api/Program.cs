@@ -6,6 +6,7 @@ using MedMatch.Domain;
 using MedMatch.Infrastructure.Persistence;
 using MedMatch.Infrastructure.Services;
 using MedMatch.Api.Configuration;
+using MedMatch.Api.Services;
 using static MedMatch.Api.Mapping.DtoMapper;
 using static MedMatch.Api.Queries.ReviewQueries;
 using static MedMatch.Api.Security.UserIdentity;
@@ -47,6 +48,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MedMatchDbContext>();
     await db.Database.MigrateAsync();
+    await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -80,8 +82,15 @@ api.MapGet("/profile", async (ClaimsPrincipal principal, MedMatchDbContext db, C
 }).RequireAuthorization();
 api.MapPut("/profile", async (PatientProfileDto dto, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
-    var userId = UserId(principal); var profile = await db.PatientProfiles.FindAsync([userId], ct); if (profile is null) return Results.NotFound();
-    ApplyProfile(profile, dto); await db.SaveChangesAsync(ct); return Results.Ok(ToProfileDto(profile));
+    var userId = UserId(principal);
+    var profile = await db.PatientProfiles.Include(x => x.DiagnosisTags).SingleOrDefaultAsync(x => x.UserId == userId, ct);
+    if (profile is null) return Results.NotFound();
+    ApplyProfile(profile, dto);
+    await DiagnosisMatching.SyncDiagnosisTagsAsync(profile, dto.Diagnoses ?? [], db, ct);
+    await db.SaveChangesAsync(ct);
+    await DiagnosisMatching.RefreshTagUsageCountsAsync(db, ct);
+    await DiagnosisMatching.ComputeMatchesAsync(userId, db, ct);
+    return Results.Ok(ToProfileDto(profile));
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
 api.MapGet("/consent", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
@@ -90,9 +99,9 @@ api.MapGet("/consent", async (ClaimsPrincipal principal, MedMatchDbContext db, C
 }).RequireAuthorization();
 api.MapPut("/consent", async (ConsentSettingsDto dto, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
-    var settings = await db.ConsentSettings.FindAsync([UserId(principal)], ct); if (settings is null) return Results.NotFound();
+    var userId = UserId(principal); var settings = await db.ConsentSettings.FindAsync([userId], ct); if (settings is null) return Results.NotFound();
     settings.ShowProfilePublicly = dto.ShowProfilePublicly; settings.ClinicsContactMe = dto.ClinicsContactMe; settings.PatientsContactMe = dto.PatientsContactMe; settings.DataForSearch = dto.DataForSearch; settings.Version++; settings.UpdatedAt = DateTimeOffset.UtcNow; settings.Ip = context.Connection.RemoteIpAddress?.ToString(); settings.UserAgent = context.Request.Headers.UserAgent.ToString();
-    await db.SaveChangesAsync(ct); return Results.Ok(ToConsentDto(settings));
+    await db.SaveChangesAsync(ct); await DiagnosisMatching.ComputeMatchesAsync(userId, db, ct); return Results.Ok(ToConsentDto(settings));
 }).RequireAuthorization();
 
 api.MapGet("/clinics", async (string? specialty, string? city, string? tag, MedMatchDbContext db, CancellationToken ct) =>
@@ -123,14 +132,21 @@ api.MapGet("/clinic/patients", async (string? diagnosis, string? symptom, MedMat
 api.MapGet("/people", async (string? diagnosis, string? symptom, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
     var currentUserId = UserId(principal);
-    var profiles = await db.PatientProfiles.Include(x => x.User).ThenInclude(x => x.ConsentSettings)
-        .Where(x => x.UserId != currentUserId && x.User.ConsentSettings!.PatientsContactMe && x.User.ConsentSettings.DataForSearch)
+    var profiles = await db.PatientProfiles
+        .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
+        .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
+        .Where(x => x.UserId != currentUserId && x.User.ConsentSettings != null && x.User.ConsentSettings.PatientsContactMe && x.User.ConsentSettings.DataForSearch)
         .AsNoTracking().ToListAsync(ct);
+
+    var diagNormalized = string.IsNullOrWhiteSpace(diagnosis) ? null : NormalizeTag(diagnosis);
+
     var matches = profiles
-        .Where(x => string.IsNullOrWhiteSpace(diagnosis) || x.Diagnoses.Any(v => v.Contains(diagnosis, StringComparison.OrdinalIgnoreCase)))
+        .Where(x => string.IsNullOrWhiteSpace(diagNormalized) ||
+                    x.Diagnoses.Any(v => NormalizeTag(v).Contains(diagNormalized)) ||
+                    x.DiagnosisTags.Any(dt => dt.DiagnosisTag.Slug.Contains(diagNormalized) || NormalizeTag(dt.DiagnosisTag.Name).Contains(diagNormalized)))
         .Where(x => string.IsNullOrWhiteSpace(symptom) || x.Symptoms.Any(v => v.Contains(symptom, StringComparison.OrdinalIgnoreCase)))
         .Where(x => string.IsNullOrWhiteSpace(city) || (x.City ?? "").Contains(city, StringComparison.OrdinalIgnoreCase))
-        .Select(x => new PatientDirectoryDto(x.UserId, x.DisplayMode == DisplayMode.Pseudonym && !string.IsNullOrWhiteSpace(x.Pseudonym) ? x.Pseudonym! : x.DisplayMode == DisplayMode.RealName && !string.IsNullOrWhiteSpace(x.RealName) ? x.RealName! : "MedMatch member", x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms, x.Bio, x.Languages));
+        .Select(x => new PatientDirectoryDto(x.UserId, DisplayName(x), x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms, x.Bio, x.Languages));
     return Results.Ok(matches);
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
@@ -142,6 +158,98 @@ api.MapPost("/people/{id:guid}/connection-requests", async (Guid id, ConnectionR
     if (recipient?.ConsentSettings is null || !recipient.ConsentSettings.PatientsContactMe) return Results.NotFound();
     var message = string.IsNullOrWhiteSpace(request.Message) ? "I would like to connect and exchange experiences through MedMatch." : request.Message.Trim();
     db.Messages.Add(new Message { FromUserId = senderId, ToUserId = id, ThreadId = Guid.NewGuid(), Content = message, ConsentSnapshot = "PatientsContactMe=true" });
+    await db.SaveChangesAsync(ct);
+    return Results.NoContent();
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+
+api.MapGet("/diagnosis-tags/suggest", async (string? q, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var query = string.IsNullOrWhiteSpace(q) ? string.Empty : NormalizeTag(q);
+    var tags = await db.DiagnosisTags.AsNoTracking()
+        .Where(x => query.Length == 0 || x.Name.ToLower().Contains(query) || x.Slug.Contains(ToSlug(query)))
+        .OrderByDescending(x => x.UsageCount).ThenBy(x => x.Name)
+        .Take(20).ToListAsync(ct);
+    return Results.Ok(tags.Select(ToDiagnosisTagDto));
+}).RequireAuthorization();
+
+api.MapGet("/matches", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var currentUserId = UserId(principal);
+    var current = await db.PatientProfiles
+        .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
+        .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
+        .SingleOrDefaultAsync(x => x.UserId == currentUserId, ct);
+
+    if (current is null || current.User.ConsentSettings is null ||
+        !current.User.ConsentSettings.PatientsContactMe || !current.User.ConsentSettings.DataForSearch)
+    {
+        return Results.Ok(Array.Empty<MatchDto>());
+    }
+
+    var candidates = await db.PatientProfiles
+        .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
+        .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
+        .Where(x => x.UserId != currentUserId && x.User.ConsentSettings != null && x.User.ConsentSettings.PatientsContactMe && x.User.ConsentSettings.DataForSearch)
+        .AsNoTracking().ToListAsync(ct);
+
+    var matches = candidates
+        .Select(candidate =>
+        {
+            var (score, sharedDiagnoses, sharedSymptoms, sameLoc) = DiagnosisMatching.EvaluateMatch(current, candidate);
+            return new
+            {
+                Score = score,
+                SharedDiagnoses = sharedDiagnoses,
+                SharedSymptoms = sharedSymptoms,
+                SameLocation = sameLoc,
+                Profile = candidate
+            };
+        })
+        .Where(x => x.Score > 0 && x.SharedDiagnoses.Length > 0)
+        .OrderByDescending(x => x.Score)
+        .ThenByDescending(x => x.SharedDiagnoses.Length)
+        .Select(x => new MatchDto(
+            x.Profile.UserId,
+            DisplayName(x.Profile),
+            x.Profile.City,
+            x.Profile.Country,
+            x.SharedDiagnoses,
+            x.SharedSymptoms,
+            x.SameLocation,
+            x.Score,
+            x.Profile.Bio,
+            x.Profile.Languages
+        ));
+
+    return Results.Ok(matches);
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+
+api.MapGet("/matches/summary", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var currentUserId = UserId(principal);
+    var unread = await db.MatchNotifications.AsNoTracking().CountAsync(x => x.UserId == currentUserId && !x.IsRead, ct);
+    return Results.Ok(new MatchSummaryDto(unread));
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+
+api.MapGet("/matches/notifications", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var currentUserId = UserId(principal);
+    var notifications = await db.MatchNotifications.AsNoTracking().Where(x => x.UserId == currentUserId).OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+    var matchedIds = notifications.Select(x => x.MatchedUserId).Distinct().ToList();
+    var profiles = await db.PatientProfiles.AsNoTracking().Where(x => matchedIds.Contains(x.UserId)).ToDictionaryAsync(x => x.UserId, ct);
+    return Results.Ok(notifications.Select(x => new MatchNotificationDto(x.Id, x.MatchedUserId, profiles.TryGetValue(x.MatchedUserId, out var p) ? DisplayName(p) : "MedMatch member", x.SharedDiagnoses, x.Score, x.IsRead, x.CreatedAt)));
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+
+api.MapPost("/matches/notifications/read", async (Guid? id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var currentUserId = UserId(principal);
+    var query = db.MatchNotifications.Where(x => x.UserId == currentUserId && !x.IsRead);
+    if (id.HasValue && id.Value != Guid.Empty)
+    {
+        query = query.Where(x => x.Id == id.Value);
+    }
+    var unread = await query.ToListAsync(ct);
+    foreach (var n in unread) n.IsRead = true;
     await db.SaveChangesAsync(ct);
     return Results.NoContent();
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });

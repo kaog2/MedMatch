@@ -46,6 +46,37 @@ public sealed class PatientProfile
     public string? AgeRange { get; set; }
     public string? Bio { get; set; }
     public string[] Languages { get; set; } = [];
+    public ICollection<PatientDiagnosisTag> DiagnosisTags { get; set; } = new List<PatientDiagnosisTag>();
+}
+
+public sealed class DiagnosisTag
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public int UsageCount { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<PatientDiagnosisTag> Patients { get; set; } = new List<PatientDiagnosisTag>();
+}
+
+public sealed class PatientDiagnosisTag
+{
+    public Guid UserId { get; set; }
+    public PatientProfile Patient { get; set; } = null!;
+    public Guid DiagnosisTagId { get; set; }
+    public DiagnosisTag DiagnosisTag { get; set; } = null!;
+}
+
+public sealed class MatchNotification
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public Guid MatchedUserId { get; set; }
+    public string[] SharedDiagnoses { get; set; } = [];
+    public int Score { get; set; }
+    public bool IsRead { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public sealed class Clinic

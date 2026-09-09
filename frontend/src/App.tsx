@@ -11,6 +11,7 @@ import ClinicDetail from './pages/ClinicDetail';
 import WriteReview from './pages/WriteReview';
 import ClinicPatientSearch from './pages/ClinicPatientSearch';
 import PeopleSearch from './pages/PeopleSearch';
+import Matches from './pages/Matches';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/review/:clinicId" element={<WriteReview />} />
           <Route path="/profile" element={<PatientProfile />} />
           <Route path="/people" element={<PeopleSearch />} />
+          <Route path="/matches" element={<Matches />} />
           <Route path="/clinic-patients" element={<ClinicPatientSearch />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

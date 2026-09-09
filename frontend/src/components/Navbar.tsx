@@ -1,5 +1,6 @@
 import {
   AppBar,
+  Badge,
   Box,
   Button,
   Container,
@@ -18,7 +19,9 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store';
+import { api, MatchSummary } from '../services/api';
 import MedMatchIcon from './MedMatchIcon';
 
 function MenuIcon() {
@@ -38,7 +41,7 @@ function CloseIcon() {
 }
 
 /** Pill-style navigation link for the desktop navbar. */
-function NavPill({ to, label }: { to: string; label: string }) {
+function NavPill({ to, label, badgeCount }: { to: string; label: string; badgeCount?: number }) {
   return (
     <Button
       component={Link}
@@ -53,6 +56,9 @@ function NavPill({ to, label }: { to: string; label: string }) {
         borderRadius: '9999px',
         border: '1px solid transparent',
         transition: 'all .15s ease',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.8,
         '&:hover': {
           bgcolor: 'rgba(255,255,255,.08)',
           borderColor: 'rgba(255,255,255,.1)',
@@ -60,7 +66,24 @@ function NavPill({ to, label }: { to: string; label: string }) {
         },
       }}
     >
-      {label}
+      <span>{label}</span>
+      {typeof badgeCount === 'number' && badgeCount > 0 && (
+        <Box
+          component="span"
+          sx={{
+            bgcolor: '#b06f42',
+            color: '#fff',
+            fontSize: '.68rem',
+            fontWeight: 800,
+            borderRadius: '9999px',
+            px: 0.8,
+            py: 0.1,
+            lineHeight: 1.2,
+          }}
+        >
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </Box>
+      )}
     </Button>
   );
 }
@@ -72,6 +95,14 @@ export default function Navbar() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const { data: matchSummary } = useQuery({
+    queryKey: ['match-summary'],
+    queryFn: () => api<MatchSummary>('/matches/summary'),
+    enabled: role === 'Patient',
+    refetchInterval: 15000,
+  });
+  const unreadMatches = matchSummary?.unreadCount ?? 0;
+
   const handleSignOut = () => {
     signOut();
     navigate('/');
@@ -79,9 +110,10 @@ export default function Navbar() {
   };
 
   // Shared nav items for desktop and mobile
-  const navItems: { to: string; label: string; show: boolean }[] = [
+  const navItems: { to: string; label: string; show: boolean; badgeCount?: number }[] = [
     { to: '/clinics', label: 'Care providers', show: true },
     { to: '/people', label: 'People', show: role === 'Patient' },
+    { to: '/matches', label: 'Matches', show: role === 'Patient', badgeCount: unreadMatches },
     { to: '/profile', label: 'Profile', show: role === 'Patient' },
     { to: '/clinic-patients', label: 'Patients', show: role === 'Clinic' },
   ];
@@ -168,7 +200,7 @@ export default function Navbar() {
                 {navItems
                   .filter((item) => item.show)
                   .map((item) => (
-                    <NavPill key={item.to} to={item.to} label={item.label} />
+                    <NavPill key={item.to} to={item.to} label={item.label} badgeCount={item.badgeCount} />
                   ))}
 
                 <Divider
@@ -234,7 +266,9 @@ export default function Navbar() {
                 }}
                 aria-label="Open navigation menu"
               >
-                <MenuIcon />
+                <Badge badgeContent={unreadMatches} color="error" variant="dot" invisible={unreadMatches === 0}>
+                  <MenuIcon />
+                </Badge>
               </IconButton>
             )}
           </Toolbar>
@@ -279,6 +313,9 @@ export default function Navbar() {
                 sx={{
                   borderRadius: '12px',
                   mb: 0.5,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                   '&:hover': { bgcolor: 'rgba(255,255,255,.07)' },
                 }}
               >
@@ -286,6 +323,23 @@ export default function Navbar() {
                   primary={item.label}
                   primaryTypographyProps={{ fontWeight: 500, fontSize: '.95rem' }}
                 />
+                {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
+                  <Box
+                    component="span"
+                    sx={{
+                      bgcolor: '#b06f42',
+                      color: '#fff',
+                      fontSize: '.7rem',
+                      fontWeight: 800,
+                      borderRadius: '9999px',
+                      px: 1,
+                      py: 0.2,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                  </Box>
+                )}
               </ListItemButton>
             ))}
         </List>
