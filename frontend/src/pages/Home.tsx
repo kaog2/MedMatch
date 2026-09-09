@@ -2,7 +2,7 @@ import { Box, Button, Container, Grid, Paper, Stack, Typography } from '@mui/mat
 import { Link } from 'react-router-dom';
 
 const highlights = [
-  { number: '01', title: 'Search with context', text: 'Find clinics by specialty, city, treatment, and the experiences that matter to you.' },
+  { number: '01', title: 'Search with context', text: 'Find care providers by specialty, city, therapy, and the experiences that matter to you.' },
   { number: '02', title: 'Learn from patients', text: 'Read thoughtful recommendations from people who have walked a similar path.' },
   { number: '03', title: 'Share on your terms', text: 'Write an experience with the privacy settings and display name that feel right.' },
 ];
@@ -16,9 +16,9 @@ export default function Home() {
           <Grid item xs={12} md={7}>
             <Typography sx={{ color: '#f2b880', fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', fontSize: '.78rem', mb: 3 }}>Care journeys, shared honestly</Typography>
             <Typography component="h1" sx={{ fontSize: { xs: '3.4rem', md: '6.4rem' }, lineHeight: .94, letterSpacing: '-.065em', fontWeight: 800, maxWidth: 760 }}>Find care with a little more confidence.</Typography>
-            <Typography sx={{ color: 'rgba(248,246,240,.72)', fontSize: { xs: '1.08rem', md: '1.28rem' }, lineHeight: 1.6, maxWidth: 570, mt: 4 }}>MedMatch connects real patient experiences with the clinics and doctors who can help next.</Typography>
+            <Typography sx={{ color: 'rgba(248,246,240,.72)', fontSize: { xs: '1.08rem', md: '1.28rem' }, lineHeight: 1.6, maxWidth: 570, mt: 4 }}>MedMatch connects real patient histories with the care providers and therapies that may help next.</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 5 }}>
-              <Button component={Link} to="/clinics" variant="contained" size="large" sx={{ bgcolor: '#f2b880', color: '#102a2b', px: 3, py: 1.5, '&:hover': { bgcolor: '#f7c99d' } }}>Explore clinics</Button>
+              <Button component={Link} to="/clinics" variant="contained" size="large" sx={{ bgcolor: '#f2b880', color: '#102a2b', px: 3, py: 1.5, '&:hover': { bgcolor: '#f7c99d' } }}>Explore care providers</Button>
               <Button component={Link} to="/register" variant="outlined" size="large" sx={{ color: '#f8f6f0', borderColor: 'rgba(248,246,240,.45)', px: 3, py: 1.5, '&:hover': { borderColor: '#f8f6f0' } }}>Share your experience</Button>
             </Stack>
           </Grid>

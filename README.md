@@ -2,7 +2,7 @@
 
 > Find care with a little more confidence.
 
-MedMatch is a privacy-focused platform for discovering clinics and doctors through patient experiences. Patients can search the care directory, read reviews, manage how their profile appears, and optionally connect with other patients who have chosen to be discoverable.
+MedMatch is a privacy-focused platform for discovering care providers and therapies through people's experiences and health histories. Patients can search the care directory, read experiences, manage how their profile appears, and optionally connect with other patients who have chosen to be discoverable.
 
 > **Project status:** MedMatch is an actively developed MVP. It is not a medical advice service and does not replace professional care.
 
@@ -12,19 +12,20 @@ MedMatch is a privacy-focused platform for discovering clinics and doctors throu
 
 ## Why MedMatch
 
-Finding care is often a research problem before it becomes a healthcare appointment. MedMatch makes that research more useful by combining structured clinic information with lived experience, while keeping sharing and contact decisions in the hands of each user.
+Finding care is often a research problem before it becomes a healthcare appointment. MedMatch makes that research more useful by combining structured care-provider information with lived experience, while keeping sharing and contact decisions in the hands of each user.
 
 - **Patients** can:
-  - Search for clinics and doctors by specialty, symptom, city, and therapy type.
-  - Read experiences and recommendations from other patients.
+  - Search for clinics, medical practices, doctors, therapists, hospitals, and therapies by specialty, symptom, city, and treatment.
+  - Read experiences and histories shared by other patients.
   - Publish their own experience, choosing to appear anonymously, with a pseudonym, or with their real name.
   - Decide whether they want to be contacted by other patients and/or clinics.
 
-- **Clinics and doctors** can:
-  - Have a verified profile.
-  - Search for patients who have explicitly marked that they are open to being contacted by clinics, with certain diagnoses or symptoms.
+- **Care providers** can:
+  - Represent a clinic, medical practice, doctor, therapist, hospital, or other provider.
+  - Supply a public website or contact information and explicitly permit publication.
+  - Search for patients who have explicitly allowed provider contact, with certain diagnoses or symptoms.
 
-The main focus is **patient → clinic**, with the "clinics searching for patients" feature being optional and highly controlled.
+The main focus is **patient → care provider**, with provider-to-patient discovery optional and consent-controlled.
 
 ---
 
@@ -39,23 +40,24 @@ The main focus is **patient → clinic**, with the "clinics searching for patien
   - Symptoms (e.g., lower back pain).
   - Location (city/country).
   - Privacy and contact preferences.
-- Publish experiences/recommendations about clinics and doctors:
+- Publish experiences and histories about care providers and therapies:
   - Rating (1–5 stars).
   - Experience text.
   - Tags (Schmerztherapie, post-prosthesis, lower back pain, etc.).
   - Anonymity option (anonymous / pseudonym / real name).
   - Option to allow contact by other patients and/or clinics.
-- Search for clinics and doctors by specialty, city, and therapy type.
+  - Search for care providers by specialty, city, and therapy type.
 - Search for other patients by diagnosis, symptom, or city when both search and contact consent are enabled.
 - Send a connection request without exposing private email addresses.
 
-### For Clinics and Doctors
+### For Care Providers
 
-- Verified clinic/doctor profile:
+- Provider profile:
   - Name, specialty, treatments offered.
   - Address, city, country.
-  - Public contact information.
-- Search for patients who explicitly allow clinic contact and search.
+  - Provider-supplied public website or contact information.
+  - Explicit permission before the provider record is published publicly.
+- Search for patients who explicitly allow provider contact and search.
 
 ### Administration
 

@@ -25,7 +25,7 @@ Nginx :80
 | --- | --- | --- |
 | Frontend | `frontend/` | React, TypeScript, Material UI, routing, forms, client state, API calls |
 | API | `backend/src/MedMatch.Api/` | Minimal API endpoints, authentication middleware, CORS, migrations on startup |
-| Domain | `backend/src/MedMatch.Domain/` | Users, profiles, clinics, doctors, reviews, consent, messages |
+| Domain | `backend/src/MedMatch.Domain/` | Users, profiles, care providers, doctors, reviews, consent, messages |
 | Application | `backend/src/MedMatch.Application/` | Request/response contracts and application interfaces |
 | Infrastructure | `backend/src/MedMatch.Infrastructure/` | EF Core DbContext, PostgreSQL mappings, migrations, token service |
 | Reverse proxy | `infra/nginx/nginx.conf` | Routes `/` to the frontend and `/api` plus `/health` to the API |
@@ -141,7 +141,7 @@ dotnet build MedMatch.sln
 dotnet test MedMatch.sln
 ```
 
-The API applies pending EF Core migrations during startup. The API container waits for PostgreSQL to become healthy before starting.
+The API applies pending EF Core migrations during startup. The API container waits for PostgreSQL to become healthy before starting. Public care-provider records require explicit publication consent and may include a provider-supplied website URL.
 
 ### Configuration
 
@@ -188,12 +188,12 @@ Registration creates a patient profile and consent record for patient accounts. 
 
 Patient discovery requires both `PatientsContactMe` and `DataForSearch` to be true. Clinic discovery uses the equivalent `ClinicsContactMe` and `DataForSearch` flags.
 
-### Clinics, doctors, and reviews
+### Care providers, doctors, and reviews
 
 | Method | Route | Access |
 | --- | --- | --- |
-| `GET` | `/api/clinics` | Public; supports `specialty`, `city`, `tag` |
-| `GET` | `/api/clinics/{id}` | Public |
+| `GET` | `/api/clinics` | Public consented care providers; supports `specialty`, `city`, `tag` |
+| `GET` | `/api/clinics/{id}` | Public only when publication consent is granted |
 | `POST` | `/api/clinics` | Clinic or admin |
 | `PUT` | `/api/clinics/{id}` | Clinic or admin |
 | `DELETE` | `/api/clinics/{id}` | Clinic or admin |
@@ -215,6 +215,8 @@ Patient discovery requires both `PatientsContactMe` and `DataForSearch` to be tr
 | `GET` | `/api/clinic/patients` | Clinic; supports `diagnosis`, `symptom` |
 
 The people endpoint excludes the requesting user and returns only consented profiles. It does not return email addresses. A connection request is stored as a `Message` with a consent snapshot. An inbox and threaded messaging UI are planned follow-up work.
+
+Although the current compatibility route is `/api/clinics`, its records represent care providers. `Clinic.Type` supports `Clinic`, `MedicalPractice`, `Doctor`, `Therapist`, `Hospital`, and `Other`. The existing table and route names are retained to avoid breaking current reviews and links; a future version can rename them to `care_providers` after a planned data migration.
 
 ## Data Model
 

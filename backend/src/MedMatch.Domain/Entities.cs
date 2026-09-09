@@ -2,6 +2,7 @@ namespace MedMatch.Domain;
 
 public enum UserRole { Patient, Clinic, Doctor, Admin }
 public enum DisplayMode { Anonymous, Pseudonym, RealName }
+public enum CareProviderType { Clinic, MedicalPractice, Doctor, Therapist, Hospital, Other }
 
 public sealed class User
 {
@@ -38,7 +39,7 @@ public sealed class Clinic
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = "Clinic";
+    public CareProviderType Type { get; set; } = CareProviderType.Clinic;
     public string Specialty { get; set; } = string.Empty;
     public string[] TreatmentsOffered { get; set; } = [];
     public string? Address { get; set; }
@@ -47,6 +48,9 @@ public sealed class Clinic
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     public string? ContactInfo { get; set; }
+    public string? PublicWebsiteUrl { get; set; }
+    public bool PublicationConsentGranted { get; set; }
+    public DateTimeOffset? PublicationConsentAt { get; set; }
     public bool IsVerified { get; set; }
     public ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();

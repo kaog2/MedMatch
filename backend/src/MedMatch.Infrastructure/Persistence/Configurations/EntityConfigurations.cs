@@ -26,7 +26,7 @@ public sealed class ConsentSettingsConfiguration : IEntityTypeConfiguration<Cons
 }
 public sealed class ClinicConfiguration : IEntityTypeConfiguration<Clinic>
 {
-    public void Configure(EntityTypeBuilder<Clinic> builder) { builder.ToTable("clinics"); builder.HasKey(x => x.Id); builder.Property(x => x.Name).HasMaxLength(200).IsRequired(); builder.Property(x => x.Specialty).HasMaxLength(150).IsRequired(); builder.Property(x => x.City).HasMaxLength(120).IsRequired(); builder.Property(x => x.Country).HasMaxLength(120).IsRequired(); builder.Property(x => x.TreatmentsOffered).HasColumnType("text[]"); }
+    public void Configure(EntityTypeBuilder<Clinic> builder) { builder.ToTable("clinics"); builder.HasKey(x => x.Id); builder.Property(x => x.Name).HasMaxLength(200).IsRequired(); builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(40); builder.Property(x => x.Specialty).HasMaxLength(150).IsRequired(); builder.Property(x => x.City).HasMaxLength(120).IsRequired(); builder.Property(x => x.Country).HasMaxLength(120).IsRequired(); builder.Property(x => x.PublicWebsiteUrl).HasMaxLength(500); builder.Property(x => x.TreatmentsOffered).HasColumnType("text[]"); }
 }
 public sealed class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
 {

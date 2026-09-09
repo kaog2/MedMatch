@@ -12,7 +12,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return response.status === 204 ? (undefined as T) : response.json();
 }
 
-export type Clinic = { id: string; name: string; type: string; specialty: string; treatmentsOffered: string[]; address?: string; city: string; country: string; contactInfo?: string; isVerified: boolean };
+export type CareProviderType = 'Clinic' | 'MedicalPractice' | 'Doctor' | 'Therapist' | 'Hospital' | 'Other';
+export type Clinic = { id: string; name: string; type: CareProviderType; specialty: string; treatmentsOffered: string[]; address?: string; city: string; country: string; contactInfo?: string; publicWebsiteUrl?: string; publicationConsentGranted: boolean; isVerified: boolean };
 export type Review = { id: string; clinicId?: string; doctorId?: string; rating: number; title: string; body: string; tags: string[]; isAnonymous: boolean; authorDisplayName: string; authorUserId?: string; createdAt: string };
 export type Profile = { displayMode: 'Anonymous' | 'Pseudonym' | 'RealName'; pseudonym?: string; realName?: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string[]; ageRange?: string; bio?: string; languages: string[] };
 export type Consent = { showProfilePublicly: boolean; clinicsContactMe: boolean; patientsContactMe: boolean; dataForSearch: boolean; version: number; updatedAt: string };
