@@ -7,10 +7,13 @@ services:
       POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER must be set}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
       POSTGRES_DB: ${DATABASE_NAME:-medmatch}
+    ports:
+      - "${DATABASE_PORT:-5432}:${DATABASE_PORT:-5432}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - medmatch-network
+      - nginx_proxi_default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-medmatch} -d ${DATABASE_NAME:-medmatch}"]
       interval: 10s
@@ -25,7 +28,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
       DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
       DATABASE_NAME: ${DATABASE_NAME:-medmatch}
       DATABASE_USER: ${DATABASE_USER:?DATABASE_USER must be set}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
