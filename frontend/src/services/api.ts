@@ -44,7 +44,7 @@ export type MatchSummary = { unreadCount: number };
 export type AdminUser = {
   id: string;
   email: string;
-  role: string;
+  roles: string[];
   displayName?: string;
   city?: string;
   country?: string;

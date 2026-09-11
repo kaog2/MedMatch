@@ -17,7 +17,13 @@ public sealed class TokenService(IConfiguration configuration) : ITokenService
         var issuer = configuration["JWT_ISSUER"] ?? throw new InvalidOperationException("JWT_ISSUER is required.");
         var audience = configuration["JWT_AUDIENCE"] ?? throw new InvalidOperationException("JWT_AUDIENCE is required.");
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(30);
-        var claims = new[] { new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), new Claim(JwtRegisteredClaimNames.Email, user.Email), new Claim(ClaimTypes.Role, user.Role.ToString()) };
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email)
+        };
+        claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r.Role.ToString())));
         var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)), SecurityAlgorithms.HmacSha256);
         var jwt = new JwtSecurityToken(issuer, audience, claims, expires: expiresAt.UtcDateTime, signingCredentials: credentials);
         return (new JwtSecurityTokenHandler().WriteToken(jwt), expiresAt);

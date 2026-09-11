@@ -19,15 +19,16 @@ public static class AdminSeeder
 
         if (await db.Users.AnyAsync(x => x.Email == email, ct)) return;
 
-        db.Users.Add(new User
+        var admin = new User
         {
             Email = email,
             PasswordHash = passwords.Hash(password),
-            Role = UserRole.Admin,
             EmailConfirmed = true,
             IsActive = true,
             ConsentSettings = new ConsentSettings()
-        });
+        };
+        admin.Roles.Add(new UserRoleAssignment { Role = UserRole.Admin });
+        db.Users.Add(admin);
 
         await db.SaveChangesAsync(ct);
     }

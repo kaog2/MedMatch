@@ -103,7 +103,7 @@ public static class CaseStudySeeder
             {
                 Email = $"case-{i:000}@medmatch.test",
                 PasswordHash = passwordHash,
-                Role = UserRole.Patient,
+                Roles = [new UserRoleAssignment { Role = UserRole.Patient }],
                 EmailConfirmed = true,
                 IsActive = true,
                 PatientProfile = profile,

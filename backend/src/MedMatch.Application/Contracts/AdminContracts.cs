@@ -3,7 +3,7 @@ namespace MedMatch.Application.Contracts;
 public sealed record AdminUserDto(
     Guid Id,
     string Email,
-    string Role,
+    string[] Roles,
     string? DisplayName,
     string? City,
     string? Country,
@@ -18,4 +18,4 @@ public sealed record AdminUserDto(
 
 public sealed record UpdateActiveRequest(bool IsActive);
 
-public sealed record UpdateRoleRequest(string Role);
+public sealed record UpdateRoleRequest(string Role, bool Enabled);

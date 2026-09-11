@@ -283,7 +283,7 @@ api.MapPost("/people/{id:guid}/connection-requests", async (Guid id, ConnectionR
 {
     var senderId = UserId(principal);
     if (senderId == id) return Results.BadRequest(new { error = "You cannot connect with yourself." });
-    var recipient = await db.Users.Include(x => x.ConsentSettings).SingleOrDefaultAsync(x => x.Id == id && x.Role == UserRole.Patient, ct);
+    var recipient = await db.Users.Include(x => x.ConsentSettings).SingleOrDefaultAsync(x => x.Id == id && x.Roles.Any(r => r.Role == UserRole.Patient), ct);
     if (recipient?.ConsentSettings is null || !recipient.ConsentSettings.PatientsContactMe) return Results.NotFound();
     var message = string.IsNullOrWhiteSpace(request.Message) ? "I would like to connect and exchange experiences through MedMatch." : request.Message.Trim();
     db.Messages.Add(new Message { FromUserId = senderId, ToUserId = id, ThreadId = Guid.NewGuid(), Content = message, ConsentSnapshot = "PatientsContactMe=true" });
@@ -387,16 +387,23 @@ api.MapPost("/matches/notifications/read", async (Guid? id, ClaimsPrincipal prin
 
 api.MapGet("/admin/users", async (string? search, string? role, int? page, int? pageSize, MedMatchDbContext db, CancellationToken ct) =>
 {
-    var query = db.Users.Include(x => x.PatientProfile).Include(x => x.ConsentSettings).AsNoTracking().AsQueryable();
+    var query = db.Users.Include(x => x.PatientProfile).Include(x => x.ConsentSettings).Include(x => x.Roles).AsNoTracking().AsQueryable();
     if (!string.IsNullOrWhiteSpace(search))
     {
-        var term = search.Trim().ToLowerInvariant();
-        query = query.Where(x => x.Email.ToLower().Contains(term) || (x.PatientProfile != null && (x.PatientProfile.Pseudonym != null && x.PatientProfile.Pseudonym.ToLower().Contains(term) || x.PatientProfile.RealName != null && x.PatientProfile.RealName.ToLower().Contains(term))));
+        var terms = search.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length > 0).ToArray();
+        foreach (var term in terms)
+        {
+            query = query.Where(x =>
+                x.Email.ToLower().Contains(term) ||
+                (x.PatientProfile != null && (
+                    (x.PatientProfile.Pseudonym != null && x.PatientProfile.Pseudonym.ToLower().Contains(term)) ||
+                    (x.PatientProfile.RealName != null && x.PatientProfile.RealName.ToLower().Contains(term))
+                )));
+        }
     }
-    if (!string.IsNullOrWhiteSpace(role))
+    if (!string.IsNullOrWhiteSpace(role) && Enum.TryParse<UserRole>(role, true, out var r))
     {
-        var parsed = Enum.TryParse<UserRole>(role, true, out var r);
-        if (parsed) query = query.Where(x => x.Role == r);
+        query = query.Where(x => x.Roles.Any(a => a.Role == r));
     }
 
     var size = Math.Clamp(pageSize ?? 25, 1, 100);
@@ -407,7 +414,7 @@ api.MapGet("/admin/users", async (string? search, string? role, int? page, int? 
     var result = users.Select(u => new AdminUserDto(
         u.Id,
         u.Email,
-        u.Role.ToString(),
+        u.Roles.Select(a => a.Role.ToString()).OrderBy(x => x).ToArray(),
         u.PatientProfile is null ? null : DisplayName(u.PatientProfile),
         u.PatientProfile?.City,
         u.PatientProfile?.Country,
@@ -474,29 +481,38 @@ api.MapPost("/admin/users/{id:guid}/active", async (Guid id, UpdateActiveRequest
 
 api.MapPost("/admin/users/{id:guid}/role", async (Guid id, UpdateRoleRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
-    if (!Enum.TryParse<UserRole>(request.Role, true, out var newRole))
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
         return Results.BadRequest(new { error = "Invalid role. Use Patient, Clinic, Doctor or Admin." });
 
-    var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, ct);
+    var user = await db.Users.Include(x => x.Roles).SingleOrDefaultAsync(x => x.Id == id, ct);
     if (user is null) return Results.NotFound();
-    if (user.Role == newRole) return Results.Ok(new { id = user.Id, role = user.Role.ToString() });
 
     var currentAdminId = UserId(principal);
+    var existing = user.Roles.FirstOrDefault(a => a.Role == role);
 
-    // An administrator cannot demote their own account (lockout protection).
-    if (id == currentAdminId && newRole != UserRole.Admin)
-        return Results.BadRequest(new { error = "You cannot change your own role." });
-
-    // Always keep at least one administrator.
-    if (user.Role == UserRole.Admin && newRole != UserRole.Admin)
+    if (request.Enabled && existing is null)
     {
-        var adminCount = await db.Users.CountAsync(x => x.Role == UserRole.Admin, ct);
-        if (adminCount <= 1) return Results.BadRequest(new { error = "At least one administrator must remain." });
+        user.Roles.Add(new UserRoleAssignment { Role = role });
+        if (role == UserRole.Patient && user.PatientProfile is null)
+            user.PatientProfile = new PatientProfile();
+    }
+    else if (!request.Enabled && existing is not null)
+    {
+        if (role == UserRole.Admin)
+        {
+            if (id == currentAdminId)
+                return Results.BadRequest(new { error = "You cannot remove your own administrator role." });
+            var adminCount = await db.Users.CountAsync(x => x.Roles.Any(a => a.Role == UserRole.Admin), ct);
+            if (adminCount <= 1)
+                return Results.BadRequest(new { error = "At least one administrator must remain." });
+        }
+        if (user.Roles.Count <= 1)
+            return Results.BadRequest(new { error = "A user must keep at least one role." });
+        user.Roles.Remove(existing);
     }
 
-    user.Role = newRole;
     await db.SaveChangesAsync(ct);
-    return Results.Ok(new { id = user.Id, role = user.Role.ToString() });
+    return Results.Ok(new { id = user.Id, roles = user.Roles.Select(a => a.Role.ToString()).OrderBy(x => x).ToArray() });
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
 app.Run();

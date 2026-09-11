@@ -115,7 +115,7 @@ public static class SampleDataSeeder
             {
                 Email = $"sample-{i:000}@medmatch.test",
                 PasswordHash = passwordHash,
-                Role = UserRole.Patient,
+                Roles = [new UserRoleAssignment { Role = UserRole.Patient }],
                 EmailConfirmed = true,
                 PatientProfile = profile,
                 ConsentSettings = new ConsentSettings

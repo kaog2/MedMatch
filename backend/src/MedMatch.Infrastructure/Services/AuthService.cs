@@ -20,7 +20,8 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            var user = new User { Email = email, Role = request.Role, PasswordHash = passwords.Hash(request.Password), PatientProfile = request.Role == UserRole.Patient ? new PatientProfile() : null, ConsentSettings = new ConsentSettings(), EmailConfirmed = false };
+            var user = new User { Email = email, PasswordHash = passwords.Hash(request.Password), PatientProfile = request.Role == UserRole.Patient ? new PatientProfile() : null, ConsentSettings = new ConsentSettings(), EmailConfirmed = false };
+            user.Roles.Add(new UserRoleAssignment { Role = request.Role });
             db.Users.Add(user);
             await db.SaveChangesAsync(cancellationToken);
             await SendVerificationEmailAsync(user, cancellationToken);
@@ -36,7 +37,7 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant(), cancellationToken);
+        var user = await db.Users.Include(x => x.Roles).SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !passwords.Verify(request.Password, user.PasswordHash)) return null;
         if (!user.EmailConfirmed) throw new InvalidOperationException("Please verify your email address before signing in.");
         if (!user.IsActive) throw new InvalidOperationException("This account has been deactivated.");
@@ -48,7 +49,7 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
     public async Task<AuthResponse?> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken)
     {
         var hash = tokens.HashRefreshToken(request.RefreshToken);
-        var stored = await db.RefreshTokens.Include(x => x.User).SingleOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
+        var stored = await db.RefreshTokens.Include(x => x.User).ThenInclude(x => x.Roles).SingleOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt <= DateTimeOffset.UtcNow) return null;
         stored.RevokedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
@@ -65,10 +66,11 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
         if (string.IsNullOrWhiteSpace(payload.Email) || payload.EmailVerified != true) return null;
 
         var email = payload.Email.Trim().ToLowerInvariant();
-        var user = await db.Users.SingleOrDefaultAsync(x => x.Email == email, cancellationToken);
+        var user = await db.Users.Include(x => x.Roles).SingleOrDefaultAsync(x => x.Email == email, cancellationToken);
         if (user is null)
         {
-            user = new User { Email = email, Role = UserRole.Patient, PasswordHash = passwords.Hash(Guid.NewGuid().ToString("N")), PatientProfile = new PatientProfile(), ConsentSettings = new ConsentSettings(), EmailConfirmed = true };
+            user = new User { Email = email, PasswordHash = passwords.Hash(Guid.NewGuid().ToString("N")), PatientProfile = new PatientProfile(), ConsentSettings = new ConsentSettings(), EmailConfirmed = true };
+            user.Roles.Add(new UserRoleAssignment { Role = UserRole.Patient });
             db.Users.Add(user);
         }
         else if (!user.EmailConfirmed) user.EmailConfirmed = true;
@@ -95,7 +97,7 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
         var refreshToken = tokens.CreateRefreshToken();
         db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = tokens.HashRefreshToken(refreshToken), ExpiresAt = DateTimeOffset.UtcNow.AddDays(14) });
         await db.SaveChangesAsync(cancellationToken);
-        return new AuthResponse(accessToken, refreshToken, expiresAt, user.Role);
+        return new AuthResponse(accessToken, refreshToken, expiresAt, user.Roles.Select(r => r.Role).Distinct().ToArray());
     }
 
     private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)

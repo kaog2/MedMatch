@@ -20,7 +20,7 @@ import {
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../store';
+import { useAuthStore, hasRole } from '../store';
 import { api, MatchSummary } from '../services/api';
 import MedMatchIcon from './MedMatchIcon';
 
@@ -89,7 +89,7 @@ function NavPill({ to, label, badgeCount }: { to: string; label: string; badgeCo
 }
 
 export default function Navbar() {
-  const { role, signOut } = useAuthStore();
+  const { roles, signOut } = useAuthStore();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -98,7 +98,7 @@ export default function Navbar() {
   const { data: matchSummary } = useQuery({
     queryKey: ['match-summary'],
     queryFn: () => api<MatchSummary>('/matches/summary'),
-    enabled: role === 'Patient',
+    enabled: hasRole(roles, 'Patient'),
     refetchInterval: 15000,
   });
   const unreadMatches = matchSummary?.unreadCount ?? 0;
@@ -112,12 +112,12 @@ export default function Navbar() {
   // Shared nav items for desktop and mobile
   const navItems: { to: string; label: string; show: boolean; badgeCount?: number }[] = [
     { to: '/clinics', label: 'Care providers', show: true },
-    { to: '/recommend', label: 'Recommend', show: role === 'Patient' },
-    { to: '/people', label: 'People', show: role === 'Patient' },
-    { to: '/matches', label: 'Matches', show: role === 'Patient', badgeCount: unreadMatches },
-    { to: '/profile', label: 'Profile', show: role === 'Patient' },
-    { to: '/clinic-patients', label: 'Patients', show: role === 'Clinic' },
-    { to: '/admin', label: 'Admin', show: role === 'Admin' },
+    { to: '/recommend', label: 'Recommend', show: hasRole(roles, 'Patient') },
+    { to: '/people', label: 'People', show: hasRole(roles, 'Patient') },
+    { to: '/matches', label: 'Matches', show: hasRole(roles, 'Patient'), badgeCount: unreadMatches },
+    { to: '/profile', label: 'Profile', show: hasRole(roles, 'Patient') },
+    { to: '/clinic-patients', label: 'Patients', show: hasRole(roles, 'Clinic') },
+    { to: '/admin', label: 'Admin', show: hasRole(roles, 'Admin') },
   ];
 
   return (
@@ -211,7 +211,7 @@ export default function Navbar() {
                   sx={{ mx: 1, borderColor: 'rgba(255,255,255,.1)', alignSelf: 'center', height: 20 }}
                 />
 
-                {role ? (
+                {roles.length > 0 ? (
                   <Button
                     onClick={handleSignOut}
                     sx={{
@@ -349,7 +349,7 @@ export default function Navbar() {
         <Divider sx={{ borderColor: 'rgba(255,255,255,.08)', mx: 2 }} />
 
         <Box sx={{ px: 2, py: 2 }}>
-          {role ? (
+          {roles.length > 0 ? (
             <Button
               fullWidth
               onClick={handleSignOut}

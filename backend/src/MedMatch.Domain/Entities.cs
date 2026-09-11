@@ -10,7 +10,9 @@ public sealed class User
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
-    public UserRole Role { get; set; } = UserRole.Patient;
+    public ICollection<UserRoleAssignment> Roles { get; set; } = new List<UserRoleAssignment>();
+    public IReadOnlyList<UserRole> RoleList => Roles.Select(r => r.Role).Distinct().ToList();
+    public bool HasRole(UserRole role) => Roles.Any(r => r.Role == role);
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLogin { get; set; }
     public bool EmailConfirmed { get; set; }
@@ -208,4 +210,11 @@ public sealed class RecommendationDiagnosisTag
     public Recommendation Recommendation { get; set; } = null!;
     public Guid DiagnosisTagId { get; set; }
     public DiagnosisTag DiagnosisTag { get; set; } = null!;
+}
+
+public sealed class UserRoleAssignment
+{
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public UserRole Role { get; set; }
 }

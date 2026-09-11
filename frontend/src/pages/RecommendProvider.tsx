@@ -13,11 +13,11 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, Clinic, CreateRecommendation, DiagnosisTag, Recommendation } from '../services/api';
-import { useAuthStore } from '../store';
+import { useAuthStore, hasRole } from '../store';
 import { Loading } from '../components/PageState';
 
 export default function RecommendProvider() {
-  const role = useAuthStore((s) => s.role);
+  const roles = useAuthStore((s) => s.roles);
   const providers = useQuery({ queryKey: ['clinics'], queryFn: () => api<Clinic[]>('/clinics') });
   const [searchParams] = useSearchParams();
   const prefillClinicId = searchParams.get('clinicId');
@@ -57,7 +57,7 @@ export default function RecommendProvider() {
     onError: (e) => setError(e instanceof Error ? e.message : 'Unable to publish your recommendation.'),
   });
 
-  if (role !== 'Patient') {
+  if (!hasRole(roles, 'Patient')) {
     return (
       <Paper sx={{ p: 3 }}>
         <Alert severity="warning">Please sign in with a patient account to recommend a care provider.</Alert>

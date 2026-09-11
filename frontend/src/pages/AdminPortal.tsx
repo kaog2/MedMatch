@@ -71,13 +71,13 @@ export default function AdminPortal() {
   });
 
   const changeRole = useMutation({
-    mutationFn: ({ id, role }: { id: string; role: string }) =>
-      api(`/admin/users/${id}/role`, { method: 'POST', body: JSON.stringify({ role }) }),
+    mutationFn: ({ id, role, enabled }: { id: string; role: string; enabled: boolean }) =>
+      api(`/admin/users/${id}/role`, { method: 'POST', body: JSON.stringify({ role, enabled }) }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['admin-users'] });
-      setNotice('User role updated.');
+      setNotice('User roles updated.');
     },
-    onError: (e) => setErrorNotice(e instanceof Error ? e.message : 'Unable to update role.'),
+    onError: (e) => setErrorNotice(e instanceof Error ? e.message : 'Unable to update roles.'),
   });
 
   const applySearch = () => {
@@ -152,9 +152,20 @@ export default function AdminPortal() {
                       <TextField
                         select
                         size="small"
-                        value={user.role}
-                        onChange={(e) => changeRole.mutate({ id: user.id, role: e.target.value })}
-                        sx={{ minWidth: 110 }}
+                        SelectProps={{
+                          multiple: true,
+                          renderValue: (selected) => (selected as string[]).join(', '),
+                        }}
+                        value={user.roles}
+                        onChange={(e) => {
+                          const next = e.target.value as unknown as string[];
+                          const prev = user.roles;
+                          const added = next.find((r) => !prev.includes(r));
+                          const removed = prev.find((r) => !next.includes(r));
+                          const role = added ?? removed;
+                          if (role) changeRole.mutate({ id: user.id, role, enabled: !!added });
+                        }}
+                        sx={{ minWidth: 140 }}
                       >
                         <MenuItem value="Patient">Patient</MenuItem>
                         <MenuItem value="Clinic">Clinic</MenuItem>
@@ -174,7 +185,7 @@ export default function AdminPortal() {
                       <Switch
                         size="small"
                         checked={user.isActive}
-                        disabled={user.role === 'Admin'}
+                        disabled={user.roles.includes('Admin')}
                         onChange={(e) => toggleActive.mutate({ id: user.id, isActive: e.target.checked })}
                       />
                     </TableCell>

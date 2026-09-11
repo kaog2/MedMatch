@@ -6,4 +6,4 @@ public sealed record RegisterRequest(string Email, string Password, UserRole Rol
 public sealed record LoginRequest(string Email, string Password);
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record GoogleLoginRequest(string Credential);
-public sealed record AuthResponse(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, UserRole Role);
+public sealed record AuthResponse(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, UserRole[] Roles);

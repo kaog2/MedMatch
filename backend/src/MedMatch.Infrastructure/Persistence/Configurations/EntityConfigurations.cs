@@ -8,7 +8,8 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("users"); builder.HasKey(x => x.Id); builder.Property(x => x.Email).HasMaxLength(320).IsRequired(); builder.HasIndex(x => x.Email).IsUnique(); builder.Property(x => x.PasswordHash).IsRequired(); builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20);
+        builder.ToTable("users"); builder.HasKey(x => x.Id); builder.Property(x => x.Email).HasMaxLength(320).IsRequired(); builder.HasIndex(x => x.Email).IsUnique(); builder.Property(x => x.PasswordHash).IsRequired();
+        builder.HasMany(x => x.Roles).WithOne(x => x.User).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.PatientProfile).WithOne(x => x.User).HasForeignKey<PatientProfile>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.ConsentSettings).WithOne(x => x.User).HasForeignKey<ConsentSettings>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
@@ -103,5 +104,15 @@ public sealed class RecommendationDiagnosisTagConfiguration : IEntityTypeConfigu
         builder.ToTable("recommendation_diagnosis_tags"); builder.HasKey(x => new { x.RecommendationId, x.DiagnosisTagId });
         builder.HasOne(x => x.Recommendation).WithMany(x => x.DiagnosisTags).HasForeignKey(x => x.RecommendationId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.DiagnosisTag).WithMany(x => x.Recommendations).HasForeignKey(x => x.DiagnosisTagId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+public sealed class UserRoleAssignmentConfiguration : IEntityTypeConfiguration<UserRoleAssignment>
+{
+    public void Configure(EntityTypeBuilder<UserRoleAssignment> builder)
+    {
+        builder.ToTable("user_roles"); builder.HasKey(x => new { x.UserId, x.Role });
+        builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20);
+        builder.HasOne(x => x.User).WithMany(x => x.Roles).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.Role);
     }
 }

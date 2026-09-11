@@ -20,6 +20,7 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<RecommendationClinic> RecommendationClinics => Set<RecommendationClinic>();
     public DbSet<RecommendationDiagnosisTag> RecommendationDiagnosisTags => Set<RecommendationDiagnosisTag>();
+    public DbSet<UserRoleAssignment> UserRoles => Set<UserRoleAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

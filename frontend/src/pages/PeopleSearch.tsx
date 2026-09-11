@@ -21,11 +21,11 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, DiagnosisTag, Person } from '../services/api';
-import { useAuthStore } from '../store';
+import { useAuthStore, hasRole } from '../store';
 import { ErrorState, Loading } from '../components/PageState';
 
 export default function PeopleSearch() {
-  const role = useAuthStore((state) => state.role);
+  const roles = useAuthStore((state) => state.roles);
   const [diagnosis, setDiagnosis] = useState('');
   const [symptom, setSymptom] = useState('');
   const [city, setCity] = useState('');
@@ -37,7 +37,7 @@ export default function PeopleSearch() {
   const query = useQuery({
     queryKey: ['people', filters],
     queryFn: () => api<Person[]>(`/people?${filters}`),
-    enabled: role === 'Patient',
+    enabled: hasRole(roles, 'Patient'),
   });
 
   const request = useMutation({
@@ -62,7 +62,7 @@ export default function PeopleSearch() {
     setFilters(params.toString());
   };
 
-  if (role !== 'Patient') {
+  if (!hasRole(roles, 'Patient')) {
     return (
       <Container sx={{ py: 6 }}>
         <Alert severity="info">People search is available to patient accounts who want to connect with other patients.</Alert>
