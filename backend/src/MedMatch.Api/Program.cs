@@ -51,6 +51,7 @@ using (var scope = app.Services.CreateScope())
     var passwords = scope.ServiceProvider.GetRequiredService<PasswordHasher>();
     await db.Database.MigrateAsync();
     await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
+    await DiagnosisTagLocalization.SeedAsync(db, CancellationToken.None);
     await AdminSeeder.SeedAsync(db, passwords, builder.Configuration, CancellationToken.None);
     if (SampleDataSeeder.IsEnabled(builder.Configuration))
         await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
@@ -293,14 +294,16 @@ api.MapPost("/people/{id:guid}/connection-requests", async (Guid id, ConnectionR
     return Results.NoContent();
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
-api.MapGet("/diagnosis-tags/suggest", async (string? q, MedMatchDbContext db, CancellationToken ct) =>
+api.MapGet("/diagnosis-tags/suggest", async (string? q, HttpContext context, MedMatchDbContext db, CancellationToken ct) =>
 {
+    var culture = PreferredCulture(context);
     var query = string.IsNullOrWhiteSpace(q) ? string.Empty : NormalizeTag(q);
     var tags = await db.DiagnosisTags.AsNoTracking()
+        .Include(x => x.Translations)
         .Where(x => query.Length == 0 || x.Name.ToLower().Contains(query) || x.Slug.Contains(ToSlug(query)))
         .OrderByDescending(x => x.UsageCount).ThenBy(x => x.Name)
         .Take(20).ToListAsync(ct);
-    return Results.Ok(tags.Select(ToDiagnosisTagDto));
+    return Results.Ok(tags.Select(x => ToDiagnosisTagDto(x, culture)));
 }).RequireAuthorization();
 
 api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>

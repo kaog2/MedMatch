@@ -22,8 +22,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Match, MatchNotification } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
+import { useTranslation } from 'react-i18next';
 
 export default function Matches() {
+  const { t } = useTranslation();
   const client = useQueryClient();
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [connectMessage, setConnectMessage] = useState('');
@@ -58,10 +60,10 @@ export default function Matches() {
     onSuccess: () => {
       setSelectedMatch(null);
       setConnectMessage('');
-      setNotice('Connection request sent.');
+      setNotice(t('matches.sent'));
     },
     onError: () => {
-      setNotice('This member is no longer accepting connection requests.');
+      setNotice(t('matches.notAccepting'));
     },
   });
 
@@ -97,29 +99,28 @@ export default function Matches() {
               fontSize: '.75rem',
             }}
           >
-            Peer Matching
+            {t('matches.eyebrow')}
           </Typography>
           <Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: '-.04em', mt: 1 }}>
-            Your Diagnosis Matches
+            {t('matches.title')}
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 1.5, maxWidth: 700 }}>
-            Connect with peers who share your conditions, lived experiences, and symptoms. Matches are computed based
-            on shared diagnosis tags, symptom overlap, and location proximity.
+            {t('matches.subtitle')}
           </Typography>
         </Box>
 
         <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-            <TextField size="small" label="Country" value={country} onChange={(e) => setCountry(e.target.value)} sx={{ minWidth: 180 }} />
-            <TextField size="small" label="City" value={city} onChange={(e) => setCity(e.target.value)} sx={{ minWidth: 180 }} />
+            <TextField size="small" label={t('common.country')} value={country} onChange={(e) => setCountry(e.target.value)} sx={{ minWidth: 180 }} />
+            <TextField size="small" label={t('common.city')} value={city} onChange={(e) => setCity(e.target.value)} sx={{ minWidth: 180 }} />
             <Button variant="contained" onClick={applyFilters}>
-              Filter
+              {t('matches.filter')}
             </Button>
-            <Button variant="text" onClick={clearFilters} color="inherit">Clear</Button>
+            <Button variant="text" onClick={clearFilters} color="inherit">{t('common.clear')}</Button>
             <Box sx={{ flexGrow: 1 }} />
             {!matches.isLoading && !matches.error && (
               <Typography color="text.secondary" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {matchList.length} match{matchList.length === 1 ? '' : 'es'}
+                {t('matches.count', { count: matchList.length })}
               </Typography>
             )}
           </Stack>
@@ -130,24 +131,24 @@ export default function Matches() {
             severity="info"
             action={
               <Button color="inherit" size="small" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
-                Mark all read
+                {t('matches.markRead')}
               </Button>
             }
           >
-            You have {unreadCount} new diagnosis match notification{unreadCount === 1 ? '' : 's'}.
+            {t('matches.unread', { count: unreadCount })}
           </Alert>
         )}
 
         {matchList.length === 0 ? (
           <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 4, textAlign: 'center' }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              No matches found yet
+              {t('matches.emptyTitle')}
             </Typography>
             <Typography color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mb: 3 }}>
-              Make sure you have saved diagnosis tags on your profile and verified that both peer contact and profile search are enabled in your consent settings.
+              {t('matches.emptyBody')}
             </Typography>
             <Button variant="contained" component={Link} to="/profile">
-              Update Profile & Tags
+              {t('matches.updateProfile')}
             </Button>
           </Card>
         ) : (
@@ -176,11 +177,11 @@ export default function Matches() {
                           {match.displayName}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {[match.city, match.country].filter(Boolean).join(', ') || 'Location not shared'}
+                          {[match.city, match.country].filter(Boolean).join(', ') || t('matches.noLocation')}
                         </Typography>
                       </Box>
                       <Chip
-                        label={`${match.matchPercentage}% Match`}
+                        label={`${match.matchPercentage}${t('matches.percentMatch')}`}
                         sx={{
                           bgcolor: match.matchPercentage >= 75 ? '#00695c' : '#b06f42',
                           color: '#fff',
@@ -194,7 +195,7 @@ export default function Matches() {
                     {match.sameLocation && (
                       <Box>
                         <Chip
-                          label="Local match (same city)"
+                          label="{t('matches.localMatch')}"
                           size="small"
                           sx={(theme) => ({
                             bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.08)',
@@ -208,7 +209,7 @@ export default function Matches() {
 
                     <Box>
                       <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                        Shared Diagnoses
+                        {t('matches.sharedDiagnoses')}
                       </Typography>
                       <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap" useFlexGap>
                         {match.sharedDiagnoses.map((diagnosis) => (
@@ -229,7 +230,7 @@ export default function Matches() {
                     {match.sharedSymptoms && match.sharedSymptoms.length > 0 && (
                       <Box>
                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                          Shared Symptoms
+                          {t('matches.sharedSymptoms')}
                         </Typography>
                         <Stack direction="row" spacing={0.8} mt={0.5} flexWrap="wrap" useFlexGap>
                           {match.sharedSymptoms.map((symptom) => (
@@ -257,7 +258,7 @@ export default function Matches() {
                         fontWeight: 600,
                       }}
                     >
-                      Request connection
+                      {t('matches.request')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -268,24 +269,23 @@ export default function Matches() {
 
         {/* Connection Request Modal */}
         <Dialog open={!!selectedMatch} onClose={() => setSelectedMatch(null)} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ fontWeight: 800 }}>Connect with {selectedMatch?.displayName}</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 800 }}>{t('matches.connectTitle', { name: selectedMatch?.displayName })}</DialogTitle>
           <DialogContent>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              You share <strong>{selectedMatch?.sharedDiagnoses.join(', ')}</strong> with {selectedMatch?.displayName}.
-              Send an introduction note to exchange treatments, recommendations, and lived experiences.
+              {t('matches.connectBody', { diagnoses: selectedMatch?.sharedDiagnoses.join(', '), name: selectedMatch?.displayName })}
             </Typography>
             <TextField
               fullWidth
               multiline
               rows={3}
-              label="Personal message (optional)"
-              placeholder="Hi, I noticed we share similar diagnosis experiences and would love to exchange insights..."
+              label={t('matches.message')}
+              placeholder={t('matches.messagePlaceholder')}
               value={connectMessage}
               onChange={(e) => setConnectMessage(e.target.value)}
             />
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setSelectedMatch(null)}>Cancel</Button>
+            <Button onClick={() => setSelectedMatch(null)}>{t('common.cancel')}</Button>
             <Button
               variant="contained"
               onClick={() =>
@@ -297,7 +297,7 @@ export default function Matches() {
               }
               disabled={sendRequest.isPending}
             >
-              {sendRequest.isPending ? 'Sending...' : 'Send request'}
+              {sendRequest.isPending ? t('matches.sending') : t('matches.send')}
             </Button>
           </DialogActions>
         </Dialog>

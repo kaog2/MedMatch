@@ -1,6 +1,6 @@
 namespace MedMatch.Application.Contracts;
 
-public sealed record DiagnosisTagDto(Guid Id, string Name, int UsageCount);
+public sealed record DiagnosisTagDto(Guid Id, string Name, string? LocalizedName, int UsageCount);
 
 public sealed record MatchDto(
     Guid UserId,

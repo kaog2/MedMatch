@@ -23,8 +23,10 @@ import { useState } from 'react';
 import { api, DiagnosisTag, Person } from '../services/api';
 import { useAuthStore, hasRole } from '../store';
 import { ErrorState, Loading } from '../components/PageState';
+import { useTranslation } from 'react-i18next';
 
 export default function PeopleSearch() {
+  const { t } = useTranslation();
   const roles = useAuthStore((state) => state.roles);
   const [diagnosis, setDiagnosis] = useState('');
   const [symptom, setSymptom] = useState('');
@@ -49,9 +51,9 @@ export default function PeopleSearch() {
     onSuccess: () => {
       setSelected(null);
       setMessage('');
-      setNotice('Connection request sent.');
+      setNotice(t('people.sent'));
     },
-    onError: () => setNotice('This person is no longer accepting connection requests.'),
+    onError: () => setNotice(t('people.notAccepting')),
   });
 
   const search = () => {
@@ -65,7 +67,7 @@ export default function PeopleSearch() {
   if (!hasRole(roles, 'Patient')) {
     return (
       <Container sx={{ py: 6 }}>
-        <Alert severity="info">People search is available to patient accounts who want to connect with other patients.</Alert>
+        <Alert severity="info">{t('people.notPatient')}</Alert>
       </Container>
     );
   }
@@ -75,18 +77,18 @@ export default function PeopleSearch() {
       <Stack spacing={4} sx={{ py: { xs: 4, md: 7 } }}>
         <Box>
           <Typography sx={{ color: '#b06f42', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', fontSize: '.75rem' }}>
-            Patient connections
+            {t('people.eyebrow')}
           </Typography>
           <Typography variant="h2" sx={{ fontWeight: 800, letterSpacing: '-.055em', mt: 1 }}>
-            Find people who understand.
+            {t('people.title')}
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 650 }}>
-            Search for shared experiences by diagnosis tags and reach out only when both sides have opted in.
+            {t('people.subtitle')}
           </Typography>
         </Box>
 
         <Alert severity="info">
-          Only members who enabled both patient contact and profile search appear here. We never show private email addresses.
+          {t('people.privacy')}
         </Alert>
 
         <PaperSearch
@@ -110,10 +112,10 @@ export default function PeopleSearch() {
                   <Stack spacing={2} height="100%">
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 800 }}>{person.displayName}</Typography>
-                      <Typography color="text.secondary">{[person.city, person.country].filter(Boolean).join(', ') || 'Location not shared'}</Typography>
+                      <Typography color="text.secondary">{[person.city, person.country].filter(Boolean).join(', ') || t('people.noLocation')}</Typography>
                     </Box>
 
-                    <Typography variant="body2">{person.bio || 'This member has chosen to share experiences with the community.'}</Typography>
+                    <Typography variant="body2">{person.bio || t('people.noBio')}</Typography>
 
                     {person.diagnoses.length > 0 && (
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -133,7 +135,7 @@ export default function PeopleSearch() {
                     )}
 
                     {person.symptoms && (
-                      <Typography variant="body2" color="text.secondary">Symptoms: {person.symptoms}</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('people.symptoms', { symptoms: person.symptoms })}</Typography>
                     )}
 
                     <Box sx={{ flexGrow: 1 }} />
@@ -142,7 +144,7 @@ export default function PeopleSearch() {
                       onClick={() => setSelected(person)}
                       sx={{ alignSelf: 'flex-start' }}
                     >
-                      Request connection
+                      {t('people.request')}
                     </Button>
                   </Stack>
                 </CardContent>
@@ -151,32 +153,32 @@ export default function PeopleSearch() {
           ))}
         </Grid>
 
-        {query.data?.length === 0 && <Typography>No matching members found. Try a broader search.</Typography>}
+        {query.data?.length === 0 && <Typography>{t('people.empty')}</Typography>}
 
         <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
-          <DialogTitle>Request a connection?</DialogTitle>
+          <DialogTitle>{t('people.requestTitle')}</DialogTitle>
           <DialogContent>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Send an invitation to {selected?.displayName}. They can decide whether to accept and message back.
+              {t('people.requestBody', { name: selected?.displayName })}
             </Typography>
             <TextField
               fullWidth
               multiline
               rows={3}
-              label="Introduction note (optional)"
-              placeholder="Mention shared health conditions or what you hope to exchange..."
+              label={t('people.note')}
+              placeholder={t('people.notePlaceholder')}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setSelected(null)}>Cancel</Button>
+            <Button onClick={() => setSelected(null)}>{t('common.cancel')}</Button>
             <Button
               variant="contained"
               onClick={() => selected && request.mutate({ person: selected, msg: message })}
               disabled={request.isPending}
             >
-              Send request
+              {t('people.send')}
             </Button>
           </DialogActions>
         </Dialog>
@@ -204,6 +206,7 @@ function PaperSearch({
   setCity: (value: string) => void;
   search: () => void;
 }) {
+  const { t } = useTranslation();
   const [inputVal, setInputVal] = useState(diagnosis);
 
   const tagSuggestions = useQuery({
@@ -217,7 +220,7 @@ function PaperSearch({
   return (
     <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack spacing={2}>
-        <Typography variant="h6" sx={{ fontWeight: 800 }}>Search shared experiences</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('people.searchTitle')}</Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <Autocomplete
@@ -241,7 +244,7 @@ function PaperSearch({
                     <Typography variant="body2">{typeof option === 'string' ? option : option.name}</Typography>
                     {typeof option !== 'string' && option.usageCount > 0 && (
                       <Chip
-                        label={`${option.usageCount} ${option.usageCount === 1 ? 'member' : 'members'}`}
+                        label={`${option.usageCount} ${t('common.members', { count: option.usageCount })}`}
                         size="small"
                         variant="outlined"
                         sx={{ fontSize: '.68rem', height: 20 }}
@@ -251,15 +254,15 @@ function PaperSearch({
                 </li>
               )}
               renderInput={(params) => (
-                <TextField {...params} fullWidth label="Diagnosis tag" placeholder="Type or pick a diagnosis..." />
+                <TextField {...params} fullWidth label={t('people.diagnosisTag')} placeholder={t('people.diagnosisPlaceholder')} />
               )}
             />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Symptom" value={symptom} onChange={(e) => setSymptom(e.target.value)} />
+            <TextField fullWidth label={t('common.symptom')} value={symptom} onChange={(e) => setSymptom(e.target.value)} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="City" value={city} onChange={(e) => setCity(e.target.value)} />
+            <TextField fullWidth label={t('common.city')} value={city} onChange={(e) => setCity(e.target.value)} />
           </Grid>
         </Grid>
         <Button
@@ -267,7 +270,7 @@ function PaperSearch({
           onClick={search}
           sx={{ alignSelf: 'flex-end' }}
         >
-          Search people
+          {t('people.searchPeople')}
         </Button>
       </Stack>
     </Paper>

@@ -26,8 +26,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, AdminUser, AdminUsersResponse, Match, Recommendation } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminPortal() {
+  const { t } = useTranslation();
   const client = useQueryClient();
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -52,7 +54,7 @@ export default function AdminPortal() {
       api(`/admin/users/${id}/active`, { method: 'POST', body: JSON.stringify({ isActive }) }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['admin-users'] });
-      setNotice('User status updated.');
+      setNotice(t('admin.userStatusUpdated'));
     },
   });
 
@@ -66,7 +68,7 @@ export default function AdminPortal() {
       api(`/admin/recommendations/${id}/moderate`, { method: 'POST', body: JSON.stringify({ approve }) }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['admin-recommendations'] });
-      setNotice('Recommendation updated.');
+      setNotice(t('admin.recommendationUpdated'));
     },
   });
 
@@ -75,9 +77,9 @@ export default function AdminPortal() {
       api(`/admin/users/${id}/role`, { method: 'POST', body: JSON.stringify({ role, enabled }) }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['admin-users'] });
-      setNotice('User roles updated.');
+      setNotice(t('admin.rolesUpdated'));
     },
-    onError: (e) => setErrorNotice(e instanceof Error ? e.message : 'Unable to update roles.'),
+    onError: (e) => setErrorNotice(e instanceof Error ? e.message : t('admin.rolesError')),
   });
 
   const applySearch = () => {
@@ -92,13 +94,13 @@ export default function AdminPortal() {
       <Stack spacing={3}>
         <Box>
           <Typography sx={{ color: '#b06f42', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', fontSize: '.75rem' }}>
-            Administration
+            {t('admin.eyebrow')}
           </Typography>
           <Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: '-.04em', mt: 1 }}>
-            User Management
+            {t('admin.title')}
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 1 }}>
-            Review users, inspect their diagnosis matches, and activate or deactivate accounts.
+            {t('admin.subtitle')}
           </Typography>
         </Box>
 
@@ -108,7 +110,7 @@ export default function AdminPortal() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             size="small"
-            label="Search email or name"
+            label={t('admin.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applySearch()}
@@ -119,7 +121,7 @@ export default function AdminPortal() {
           </Button>
           {users.data && (
             <Typography color="text.secondary" sx={{ alignSelf: 'center' }}>
-              {users.data.total} users
+              {t('admin.users', { count: users.data.total })}
             </Typography>
           )}
         </Stack>
@@ -132,12 +134,12 @@ export default function AdminPortal() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>User</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Location</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Diagnoses</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Discoverable</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Active</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.user')}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.role')}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.location')}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.diagnoses')}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.discoverable')}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{t('admin.active')}</TableCell>
                   <TableCell />
                 </TableRow>
               </TableHead>
@@ -167,10 +169,10 @@ export default function AdminPortal() {
                         }}
                         sx={{ minWidth: 140 }}
                       >
-                        <MenuItem value="Patient">Patient</MenuItem>
-                        <MenuItem value="Clinic">Clinic</MenuItem>
-                        <MenuItem value="Doctor">Doctor</MenuItem>
-                        <MenuItem value="Admin">Admin</MenuItem>
+                        <MenuItem value="Patient">{t('roles.Patient')}</MenuItem>
+                        <MenuItem value="Clinic">{t('roles.Clinic')}</MenuItem>
+                        <MenuItem value="Doctor">{t('roles.Doctor')}</MenuItem>
+                        <MenuItem value="Admin">{t('roles.Admin')}</MenuItem>
                       </TextField>
                     </TableCell>
                     <TableCell>{[user.city, user.country].filter(Boolean).join(', ') || '—'}</TableCell>
@@ -180,7 +182,7 @@ export default function AdminPortal() {
                         {user.diagnoses.length > 3 && <Chip label={`+${user.diagnoses.length - 3}`} size="small" variant="outlined" />}
                       </Stack>
                     </TableCell>
-                    <TableCell>{user.patientsContactMe && user.dataForSearch ? 'Yes' : 'No'}</TableCell>
+                    <TableCell>{user.patientsContactMe && user.dataForSearch ? t('admin.yes') : t('admin.no')}</TableCell>
                     <TableCell>
                       <Switch
                         size="small"
@@ -190,7 +192,7 @@ export default function AdminPortal() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Button size="small" onClick={() => setSelectedUser(user)}>Matches</Button>
+                      <Button size="small" onClick={() => setSelectedUser(user)}>{t('admin.matches')}</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -200,17 +202,17 @@ export default function AdminPortal() {
         )}
 
         <Stack direction="row" spacing={2} justifyContent="center">
-          <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-          <Typography alignSelf="center">Page {page} of {totalPages}</Typography>
-          <Button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>{t('admin.previous')}</Button>
+          <Typography alignSelf="center">{t('admin.page', { page, total: totalPages })}</Typography>
+          <Button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>{t('admin.next')}</Button>
         </Stack>
 
         <Divider />
 
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>Provider recommendations</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>{t('admin.recommendationsTitle')}</Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-            Approve or reject positive provider recommendations submitted by patients.
+            {t('admin.recommendationsSubtitle')}
           </Typography>
         </Box>
 
@@ -218,7 +220,7 @@ export default function AdminPortal() {
         {recommendations.error && <ErrorState error={recommendations.error} />}
 
         {recommendations.data && recommendations.data.length === 0 && (
-          <Typography color="text.secondary">No recommendations yet.</Typography>
+          <Typography color="text.secondary">{t('admin.noRecommendations')}</Typography>
         )}
 
         {recommendations.data?.map((rec) => (
@@ -245,16 +247,16 @@ export default function AdminPortal() {
               <Typography sx={{ mt: 1 }}>{rec.details}</Typography>
               {rec.moderationNote && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  Note: {rec.moderationNote}
+                  {t('admin.note', { note: rec.moderationNote })}
                 </Typography>
               )}
               {rec.status === 'Pending' && (
                 <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
                   <Button size="small" variant="contained" color="success" onClick={() => moderate.mutate({ id: rec.id, approve: true })}>
-                    Approve
+                    {t('admin.approve')}
                   </Button>
                   <Button size="small" variant="outlined" color="error" onClick={() => moderate.mutate({ id: rec.id, approve: false })}>
-                    Reject
+                    {t('admin.reject')}
                   </Button>
                 </Stack>
               )}
@@ -266,11 +268,11 @@ export default function AdminPortal() {
       <Drawer anchor="right" open={!!selectedUser} onClose={() => setSelectedUser(null)}>
         <Box sx={{ width: { xs: '100vw', sm: 480 }, p: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>Matches for {selectedUser?.displayName || selectedUser?.email}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('admin.matchesFor', { name: selectedUser?.displayName || selectedUser?.email })}</Typography>
             <IconButton onClick={() => setSelectedUser(null)}>✕</IconButton>
           </Stack>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-            {selectedUser?.email} · {[selectedUser?.city, selectedUser?.country].filter(Boolean).join(', ') || 'No location'}
+            {selectedUser?.email} · {[selectedUser?.city, selectedUser?.country].filter(Boolean).join(', ') || t('admin.noLocation')}
           </Typography>
           {selectedUser && selectedUser.diagnoses.length > 0 && (
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
@@ -280,7 +282,7 @@ export default function AdminPortal() {
           <Divider sx={{ mb: 2 }} />
           {matches.isLoading && <Loading />}
           {matches.error && <ErrorState error={matches.error} />}
-          {matches.data?.length === 0 && <Typography color="text.secondary">No matches for this user.</Typography>}
+          {matches.data?.length === 0 && <Typography color="text.secondary">{t('admin.noMatches')}</Typography>}
           <Stack spacing={1.5}>
             {matches.data?.map((match) => (
               <Card key={match.userId} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -289,7 +291,7 @@ export default function AdminPortal() {
                     <Typography sx={{ fontWeight: 700 }}>{match.displayName}</Typography>
                     <Chip label={`${match.matchPercentage}%`} size="small" sx={{ bgcolor: '#00695c', color: '#fff', fontWeight: 700 }} />
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">{[match.city, match.country].filter(Boolean).join(', ') || 'Location not shared'}</Typography>
+                  <Typography variant="caption" color="text.secondary">{[match.city, match.country].filter(Boolean).join(', ') || t('matches.noLocation')}</Typography>
                   <Stack direction="row" spacing={0.5} mt={1} flexWrap="wrap" useFlexGap>
                     {match.sharedDiagnoses.map((d) => <Chip key={d} label={d} size="small" variant="outlined" />)}
                   </Stack>

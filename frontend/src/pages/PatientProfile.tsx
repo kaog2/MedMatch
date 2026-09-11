@@ -17,10 +17,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Consent, DiagnosisTag, Profile } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
+import { useTranslation } from 'react-i18next';
 
 const empty: Profile = { displayMode: 'Anonymous', diagnoses: [], interventions: [], symptoms: '', languages: [] };
 
 export default function PatientProfile() {
+  const { t } = useTranslation();
   const client = useQueryClient();
   const profile = useQuery({ queryKey: ['profile'], queryFn: () => api<Profile>('/profile') });
   const consent = useQuery({ queryKey: ['consent'], queryFn: () => api<Consent>('/consent') });
@@ -35,6 +37,9 @@ export default function PatientProfile() {
         `/diagnosis-tags/suggest${diagnosisInput.trim() ? `?q=${encodeURIComponent(diagnosisInput.trim())}` : ''}`
       ),
   });
+
+  const displayTag = (name: string) =>
+    suggestions.data?.find((t) => t.name.toLowerCase() === name.toLowerCase())?.localizedName ?? name;
 
   useEffect(() => { if (profile.data) setForm(profile.data); }, [profile.data]);
   useEffect(() => { if (consent.data) setPrivacy(consent.data); }, [consent.data]);
@@ -71,17 +76,17 @@ export default function PatientProfile() {
 
   return (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Your profile and privacy</Typography>
+      <Typography variant="h4" gutterBottom>{t('profile.title')}</Typography>
       <Stack spacing={2}>
-        <TextField select label="How you appear" value={form.displayMode} onChange={(e) => setForm({ ...form, displayMode: e.target.value as Profile['displayMode'] })}>
-          <MenuItem value="Anonymous">Anonymous</MenuItem>
-          <MenuItem value="Pseudonym">Pseudonym</MenuItem>
-          <MenuItem value="RealName">Real name</MenuItem>
+        <TextField select label={t('profile.appearAs')} value={form.displayMode} onChange={(e) => setForm({ ...form, displayMode: e.target.value as Profile['displayMode'] })}>
+          <MenuItem value="Anonymous">{t('profile.anonymous')}</MenuItem>
+          <MenuItem value="Pseudonym">{t('profile.pseudonym')}</MenuItem>
+          <MenuItem value="RealName">{t('profile.realName')}</MenuItem>
         </TextField>
-        {form.displayMode === 'Pseudonym' && <TextField label="Pseudonym" value={form.pseudonym ?? ''} onChange={(e) => update('pseudonym', e.target.value)} />}
-        {form.displayMode === 'RealName' && <TextField label="Real name" value={form.realName ?? ''} onChange={(e) => update('realName', e.target.value)} />}
-        <TextField label="City" value={form.city ?? ''} onChange={(e) => update('city', e.target.value)} />
-        <TextField label="Country" value={form.country ?? ''} onChange={(e) => update('country', e.target.value)} />
+        {form.displayMode === 'Pseudonym' && <TextField label={t('profile.pseudonym')} value={form.pseudonym ?? ''} onChange={(e) => update('pseudonym', e.target.value)} />}
+        {form.displayMode === 'RealName' && <TextField label={t('profile.realName')} value={form.realName ?? ''} onChange={(e) => update('realName', e.target.value)} />}
+        <TextField label={t('common.city')} value={form.city ?? ''} onChange={(e) => update('city', e.target.value)} />
+        <TextField label={t('common.country')} value={form.country ?? ''} onChange={(e) => update('country', e.target.value)} />
 
         <Autocomplete
           multiple
@@ -90,7 +95,7 @@ export default function PatientProfile() {
           value={form.diagnoses}
           inputValue={diagnosisInput}
           onInputChange={(_, value) => setDiagnosisInput(value)}
-          getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
+          getOptionLabel={(option) => typeof option === 'string' ? displayTag(option) : (option.localizedName ?? option.name)}
           isOptionEqualToValue={(option, value) => {
             const optName = typeof option === 'string' ? option : option.name;
             const valName = typeof value === 'string' ? value : value.name;
@@ -112,7 +117,7 @@ export default function PatientProfile() {
               return (
                 <Chip
                   key={key}
-                  label={typeof option === 'string' ? option : option.name}
+                  label={typeof option === 'string' ? displayTag(option) : (option.localizedName ?? option.name)}
                   size="small"
                   sx={(theme) => ({
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.12)',
@@ -128,11 +133,11 @@ export default function PatientProfile() {
             <li {...props} key={typeof option === 'string' ? option : option.id}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {typeof option === 'string' ? option : option.name}
+                  {typeof option === 'string' ? displayTag(option) : (option.localizedName ?? option.name)}
                 </Typography>
                 {typeof option !== 'string' && option.usageCount > 0 && (
                   <Chip
-                    label={`${option.usageCount} ${option.usageCount === 1 ? 'member' : 'members'}`}
+                    label={`${option.usageCount} ${t('common.members', { count: option.usageCount })}`}
                     size="small"
                     variant="outlined"
                     sx={{ fontSize: '.68rem', height: 20 }}
@@ -157,23 +162,23 @@ export default function PatientProfile() {
                     original?.(e);
                   },
                 }}
-                label="Diagnoses tags"
-                placeholder="Search or add diagnoses..."
-                helperText="Add standard tags or type custom conditions. Press Enter or comma to add a tag."
+                label={t('profile.diagnosisTags')}
+                placeholder={t('profile.diagnosisPlaceholder')}
+                helperText={t('profile.diagnosisHelper')}
               />
             );
           }}
         />
 
-        <TextField label="Symptoms" multiline minRows={3} value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} helperText="Describe your symptoms in your own words — spaces and full sentences are fine." />
+        <TextField label={t('profile.symptoms')} multiline minRows={3} value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} helperText={t('profile.symptomsHelper')} />
 
         {privacy && (
           <>
-            <Typography variant="h6" sx={{ mt: 1 }}>Consent preferences</Typography>
-            <FormControlLabel control={<Switch checked={privacy.showProfilePublicly} onChange={(e) => setPrivacy({ ...privacy, showProfilePublicly: e.target.checked })} />} label="Show my profile publicly" />
-            <FormControlLabel control={<Switch checked={privacy.patientsContactMe} onChange={(e) => setPrivacy({ ...privacy, patientsContactMe: e.target.checked })} />} label="Other patients can contact me" />
-            <FormControlLabel control={<Switch checked={privacy.clinicsContactMe} onChange={(e) => setPrivacy({ ...privacy, clinicsContactMe: e.target.checked })} />} label="Clinics can contact me" />
-            <FormControlLabel control={<Switch checked={privacy.dataForSearch} onChange={(e) => setPrivacy({ ...privacy, dataForSearch: e.target.checked })} />} label="Allow my health profile in contact search and peer matching" />
+            <Typography variant="h6" sx={{ mt: 1 }}>{t('profile.consentTitle')}</Typography>
+            <FormControlLabel control={<Switch checked={privacy.showProfilePublicly} onChange={(e) => setPrivacy({ ...privacy, showProfilePublicly: e.target.checked })} />} label={t('profile.showPublic')} />
+            <FormControlLabel control={<Switch checked={privacy.patientsContactMe} onChange={(e) => setPrivacy({ ...privacy, patientsContactMe: e.target.checked })} />} label={t('profile.patientsContact')} />
+            <FormControlLabel control={<Switch checked={privacy.clinicsContactMe} onChange={(e) => setPrivacy({ ...privacy, clinicsContactMe: e.target.checked })} />} label={t('profile.clinicsContact')} />
+            <FormControlLabel control={<Switch checked={privacy.dataForSearch} onChange={(e) => setPrivacy({ ...privacy, dataForSearch: e.target.checked })} />} label={t('profile.dataSearch')} />
           </>
         )}
 
@@ -183,15 +188,15 @@ export default function PatientProfile() {
             severity="success"
             action={
               <Button color="inherit" size="small" component={Link} to="/matches">
-                View Matches
+                {t('profile.viewMatches')}
               </Button>
             }
           >
-            Profile saved! Your diagnosis tags are synchronized and peer matches have been updated.
+            {t('profile.saved')}
           </Alert>
         )}
         <Button variant="contained" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving...' : 'Save changes'}
+          {mutation.isPending ? t('common.saving') : t('common.save')}
         </Button>
       </Stack>
     </Paper>

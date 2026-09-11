@@ -1,5 +1,6 @@
 import { Alert, Box, Divider, Typography } from '@mui/material';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Prefer the runtime-injected config (written by the container entrypoint from
 // env vars) so the client id never has to be baked into the image. Fall back
@@ -12,6 +13,7 @@ type GoogleAccounts = { id: { initialize: (options: { client_id: string; callbac
 declare global { interface Window { google?: { accounts: GoogleAccounts }; __MEDMATCH_CONFIG__?: { GOOGLE_CLIENT_ID?: string; API_URL?: string } } }
 
 export default function GoogleSignInButton({ onCredential }: { onCredential: (credential: string) => void }) {
+  const { t } = useTranslation();
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,6 +31,6 @@ export default function GoogleSignInButton({ onCredential }: { onCredential: (cr
     return () => { script.remove(); };
   }, [onCredential]);
 
-  if (!clientId) return <Alert severity="info">Google sign-in is not configured for this environment.</Alert>;
-  return <Box><Divider sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">OR</Typography></Divider><Box ref={buttonRef} sx={{ display: 'flex', justifyContent: 'center' }} /></Box>;
+  if (!clientId) return <Alert severity="info">{t('googleSignIn.notConfigured')}</Alert>;
+  return <Box><Divider sx={{ my: 1 }}><Typography variant="caption" color="text.secondary">{t('googleSignIn.or')}</Typography></Divider><Box ref={buttonRef} sx={{ display: 'flex', justifyContent: 'center' }} /></Box>;
 }

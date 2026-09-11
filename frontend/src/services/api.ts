@@ -1,12 +1,15 @@
 import { useAuthStore } from '../store';
+import i18n from '../i18n';
 
 const baseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL ?? 'http://localhost:5000';
+
+const resolvedLanguage = () => (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().accessToken;
   const response = await fetch(`${baseUrl}/api${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': resolvedLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
   });
   if (!response.ok) throw new Error((await response.json().catch(() => ({ error: response.statusText }))).error ?? 'Request failed');
   return response.status === 204 ? (undefined as T) : response.json();
@@ -18,7 +21,7 @@ export type Review = { id: string; clinicId?: string; doctorId?: string; rating:
 export type Profile = { displayMode: 'Anonymous' | 'Pseudonym' | 'RealName'; pseudonym?: string; realName?: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string; ageRange?: string; bio?: string; languages: string[] };
 export type Consent = { showProfilePublicly: boolean; clinicsContactMe: boolean; patientsContactMe: boolean; dataForSearch: boolean; version: number; updatedAt: string };
 export type Person = { userId: string; displayName: string; city?: string; country?: string; diagnoses: string[]; interventions: string[]; symptoms: string; bio?: string; languages: string[] };
-export type DiagnosisTag = { id: string; name: string; usageCount: number };
+export type DiagnosisTag = { id: string; name: string; localizedName?: string | null; usageCount: number };
 export type Match = {
   userId: string;
   displayName: string;

@@ -63,6 +63,15 @@ public sealed class DiagnosisTag
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<PatientDiagnosisTag> Patients { get; set; } = new List<PatientDiagnosisTag>();
     public ICollection<RecommendationDiagnosisTag> Recommendations { get; set; } = new List<RecommendationDiagnosisTag>();
+    public ICollection<DiagnosisTagTranslation> Translations { get; set; } = new List<DiagnosisTagTranslation>();
+}
+
+public sealed class DiagnosisTagTranslation
+{
+    public Guid DiagnosisTagId { get; set; }
+    public DiagnosisTag DiagnosisTag { get; set; } = null!;
+    public string Culture { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 }
 
 public sealed class PatientDiagnosisTag

@@ -57,6 +57,15 @@ public sealed class DiagnosisTagConfiguration : IEntityTypeConfiguration<Diagnos
 {
     public void Configure(EntityTypeBuilder<DiagnosisTag> builder) { builder.ToTable("diagnosis_tags"); builder.HasKey(x => x.Id); builder.Property(x => x.Name).HasMaxLength(200).IsRequired(); builder.Property(x => x.Slug).HasMaxLength(200).IsRequired(); builder.HasIndex(x => x.Slug).IsUnique(); builder.HasIndex(x => x.Name); }
 }
+public sealed class DiagnosisTagTranslationConfiguration : IEntityTypeConfiguration<DiagnosisTagTranslation>
+{
+    public void Configure(EntityTypeBuilder<DiagnosisTagTranslation> builder)
+    {
+        builder.ToTable("diagnosis_tag_translations"); builder.HasKey(x => new { x.DiagnosisTagId, x.Culture });
+        builder.Property(x => x.Culture).HasMaxLength(10).IsRequired(); builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        builder.HasOne(x => x.DiagnosisTag).WithMany(x => x.Translations).HasForeignKey(x => x.DiagnosisTagId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
 public sealed class PatientDiagnosisTagConfiguration : IEntityTypeConfiguration<PatientDiagnosisTag>
 {
     public void Configure(EntityTypeBuilder<PatientDiagnosisTag> builder)

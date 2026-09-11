@@ -11,6 +11,8 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   SvgIcon,
   Toolbar,
@@ -20,11 +22,13 @@ import {
   useTheme,
 } from '@mui/material';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore, hasRole } from '../store';
 import { api, MatchSummary } from '../services/api';
 import { useColorMode } from '../theme';
+import i18n, { supportedLanguages } from '../i18n';
 import MedMatchIcon from './MedMatchIcon';
 
 function MenuIcon() {
@@ -56,6 +60,15 @@ function MoonIcon() {
   return (
     <SvgIcon viewBox="0 0 24 24">
       <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </SvgIcon>
+  );
+}
+
+function GlobeIcon() {
+  return (
+    <SvgIcon viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18" />
     </SvgIcon>
   );
 }
@@ -117,13 +130,20 @@ function NavPill({ to, label, badgeCount }: { to: string; label: string; badgeCo
 }
 
 export default function Navbar() {
+  const { t } = useTranslation();
   const { roles, email, signOut } = useAuthStore();
   const { mode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [langAnchor, setLangAnchor] = useState<HTMLElement | null>(null);
   const initials = initialsFrom(email);
+
+  const changeLanguage = (code: string) => {
+    void i18n.changeLanguage(code);
+    setLangAnchor(null);
+  };
 
   const { data: matchSummary } = useQuery({
     queryKey: ['match-summary'],
@@ -141,13 +161,13 @@ export default function Navbar() {
 
   // Shared nav items for desktop and mobile
   const navItems: { to: string; label: string; show: boolean; badgeCount?: number }[] = [
-    { to: '/clinics', label: 'Care providers', show: true },
-    { to: '/recommend', label: 'Recommend', show: hasRole(roles, 'Patient') },
-    { to: '/people', label: 'People', show: hasRole(roles, 'Patient') },
-    { to: '/matches', label: 'Matches', show: hasRole(roles, 'Patient'), badgeCount: unreadMatches },
-    { to: '/profile', label: 'Profile', show: hasRole(roles, 'Patient') },
-    { to: '/clinic-patients', label: 'Patients', show: hasRole(roles, 'Clinic') },
-    { to: '/admin', label: 'Admin', show: hasRole(roles, 'Admin') },
+    { to: '/clinics', label: t('nav.careProviders'), show: true },
+    { to: '/recommend', label: t('nav.recommend'), show: hasRole(roles, 'Patient') },
+    { to: '/people', label: t('nav.people'), show: hasRole(roles, 'Patient') },
+    { to: '/matches', label: t('nav.matches'), show: hasRole(roles, 'Patient'), badgeCount: unreadMatches },
+    { to: '/profile', label: t('nav.profile'), show: hasRole(roles, 'Patient') },
+    { to: '/clinic-patients', label: t('nav.patients'), show: hasRole(roles, 'Clinic') },
+    { to: '/admin', label: t('nav.admin'), show: hasRole(roles, 'Admin') },
   ];
 
   return (
@@ -221,7 +241,7 @@ export default function Navbar() {
                     mt: 0.25,
                   }}
                 >
-                  Health Network
+                  {t('nav.tagline')}
                 </Typography>
               </Box>
             </Box>
@@ -241,7 +261,20 @@ export default function Navbar() {
                   sx={{ mx: 1, borderColor: 'rgba(255,255,255,.1)', alignSelf: 'center', height: 20 }}
                 />
 
-                <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+                <Tooltip title={t('nav.switchLanguage')}>
+                  <IconButton
+                    onClick={(e) => setLangAnchor(e.currentTarget)}
+                    aria-label="Change language"
+                    sx={{
+                      color: 'rgba(248,246,240,.8)',
+                      '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
+                    }}
+                  >
+                    <GlobeIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title={mode === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}>
                   <IconButton
                     onClick={toggleColorMode}
                     aria-label="Toggle color mode"
@@ -256,7 +289,7 @@ export default function Navbar() {
 
                 {roles.length > 0 ? (
                   <>
-                    <Tooltip title={email || 'Signed in'}>
+                    <Tooltip title={email || t('nav.signedIn')}>
                       <Avatar
                         sx={{
                           width: 36,
@@ -290,7 +323,7 @@ export default function Navbar() {
                         },
                       }}
                     >
-                      Sign out
+                      {t('nav.signOut')}
                     </Button>
                   </>
                 ) : (
@@ -313,7 +346,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    Sign in
+                    {t('nav.signIn')}
                   </Button>
                 )}
               </Stack>
@@ -322,6 +355,16 @@ export default function Navbar() {
             {/* ---- Mobile: theme toggle + hamburger ---- */}
             {isMobile && (
               <Stack direction="row" alignItems="center" spacing={0.25}>
+                <IconButton
+                  onClick={(e) => setLangAnchor(e.currentTarget)}
+                  aria-label="Change language"
+                  sx={{
+                    color: 'rgba(248,246,240,.8)',
+                    '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
+                  }}
+                >
+                  <GlobeIcon />
+                </IconButton>
                 <IconButton
                   onClick={toggleColorMode}
                   aria-label="Toggle color mode"
@@ -471,7 +514,7 @@ export default function Navbar() {
                 '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
               }}
             >
-              Sign out
+              {t('nav.signOut')}
             </Button>
           ) : (
             <Button
@@ -489,11 +532,29 @@ export default function Navbar() {
                 '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
               }}
             >
-              Sign in
+              {t('nav.signIn')}
             </Button>
           )}
         </Box>
       </Drawer>
+
+      <Menu
+        anchorEl={langAnchor}
+        open={!!langAnchor}
+        onClose={() => setLangAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {supportedLanguages.map((lang) => (
+          <MenuItem
+            key={lang.code}
+            selected={i18n.resolvedLanguage?.startsWith(lang.code)}
+            onClick={() => changeLanguage(lang.code)}
+          >
+            {lang.label}
+          </MenuItem>
+        ))}
+      </Menu>
     </>
   );
 }

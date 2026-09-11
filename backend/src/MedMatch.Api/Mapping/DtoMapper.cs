@@ -29,7 +29,7 @@ public static class DtoMapper
         return string.Concat(normalized.Select(c => char.IsLetterOrDigit(c) ? c : '-')).Trim('-');
     }
 
-    public static DiagnosisTagDto ToDiagnosisTagDto(DiagnosisTag tag) => new(tag.Id, tag.Name, tag.UsageCount);
+    public static DiagnosisTagDto ToDiagnosisTagDto(DiagnosisTag tag, string culture = "en") => new(tag.Id, tag.Name, tag.Translations.FirstOrDefault(x => x.Culture == culture)?.Name, tag.UsageCount);
 
     public static string DisplayName(PatientProfile profile) =>
         profile.DisplayMode == DisplayMode.Pseudonym && !string.IsNullOrWhiteSpace(profile.Pseudonym) ? profile.Pseudonym! :

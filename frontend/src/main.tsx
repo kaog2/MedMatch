@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AppThemeProvider } from './theme';
+import './i18n';
 
 const client = new QueryClient();
 

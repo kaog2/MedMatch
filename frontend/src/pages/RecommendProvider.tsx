@@ -15,8 +15,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api, Clinic, CreateRecommendation, DiagnosisTag, Recommendation } from '../services/api';
 import { useAuthStore, hasRole } from '../store';
 import { Loading } from '../components/PageState';
+import { useTranslation } from 'react-i18next';
 
 export default function RecommendProvider() {
+  const { t } = useTranslation();
   const roles = useAuthStore((s) => s.roles);
   const providers = useQuery({ queryKey: ['clinics'], queryFn: () => api<Clinic[]>('/clinics') });
   const [searchParams] = useSearchParams();
@@ -46,6 +48,9 @@ export default function RecommendProvider() {
       ),
   });
 
+  const displayTag = (name: string) =>
+    suggestions.data?.find((t) => t.name.toLowerCase() === name.toLowerCase())?.localizedName ?? name;
+
   const submit = useMutation({
     mutationFn: (payload: CreateRecommendation) => api<Recommendation>('/recommendations', { method: 'POST', body: JSON.stringify(payload) }),
     onSuccess: (created) => {
@@ -54,7 +59,7 @@ export default function RecommendProvider() {
       setSelectedProviders([]);
       setDetails('');
     },
-    onError: (e) => setError(e instanceof Error ? e.message : 'Unable to publish your recommendation.'),
+    onError: (e) => setError(e instanceof Error ? e.message : t('recommend.error')),
   });
 
   const addDiagnosis = (raw: string) => {
@@ -69,7 +74,7 @@ export default function RecommendProvider() {
   if (!hasRole(roles, 'Patient')) {
     return (
       <Paper sx={{ p: 3 }}>
-        <Alert severity="warning">Please sign in with a patient account to recommend a care provider.</Alert>
+        <Alert severity="warning">{t('recommend.signIn')}</Alert>
       </Paper>
     );
   }
@@ -79,9 +84,9 @@ export default function RecommendProvider() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (selectedProviders.length === 0) return setError('Select at least one care provider.');
-    if (selectedDiagnoses.length === 0) return setError('Select at least one diagnosis or symptom.');
-    if (details.trim().length < 10) return setError('Please describe how the provider helped you (at least 10 characters).');
+    if (selectedProviders.length === 0) return setError(t('recommend.needProvider'));
+    if (selectedDiagnoses.length === 0) return setError(t('recommend.needDiagnosis'));
+    if (details.trim().length < 10) return setError(t('recommend.needDetails'));
     submit.mutate({
       clinicIds: selectedProviders.map((p) => p.id),
       diagnoses: selectedDiagnoses,
@@ -91,10 +96,9 @@ export default function RecommendProvider() {
 
   return (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Recommend a care provider</Typography>
+      <Typography variant="h4" gutterBottom>{t('recommend.title')}</Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Tell others which care providers helped with your diagnosis or symptoms. Only positive, constructive
-        experiences are published.
+        {t('recommend.subtitle')}
       </Typography>
 
       <Box component="form" onSubmit={handleSubmit}>
@@ -102,9 +106,9 @@ export default function RecommendProvider() {
           {error && <Alert severity="error">{error}</Alert>}
           {result && (
             <Alert severity={result.status === 'Approved' ? 'success' : result.status === 'Rejected' ? 'error' : 'info'}>
-              {result.status === 'Approved' && 'Thank you! Your recommendation has been published.'}
-              {result.status === 'Rejected' && `Your recommendation was not published${result.moderationNote ? `: ${result.moderationNote}` : '.'}`}
-              {result.status === 'Pending' && 'Your recommendation is awaiting review before it is published.'}
+              {result.status === 'Approved' && t('recommend.approved')}
+              {result.status === 'Rejected' && t('recommend.rejected', { note: result.moderationNote ? `: ${result.moderationNote}` : '.' })}
+              {result.status === 'Pending' && t('recommend.pending')}
             </Alert>
           )}
 
@@ -115,7 +119,7 @@ export default function RecommendProvider() {
             value={selectedDiagnoses}
             inputValue={diagnosisInput}
             onInputChange={(_, value) => setDiagnosisInput(value)}
-            getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
+            getOptionLabel={(option) => (typeof option === 'string' ? displayTag(option) : (option.localizedName ?? option.name))}
             isOptionEqualToValue={(option, value) => {
               const optName = typeof option === 'string' ? option : option.name;
               const valName = typeof value === 'string' ? value : value.name;
@@ -135,7 +139,7 @@ export default function RecommendProvider() {
                 return (
                   <Chip
                     key={key}
-                    label={typeof option === 'string' ? option : option.name}
+                    label={typeof option === 'string' ? displayTag(option) : (option.localizedName ?? option.name)}
                     size="small"
                     sx={(theme) => ({
                       bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.12)',
@@ -163,9 +167,9 @@ export default function RecommendProvider() {
                       original?.(e);
                     },
                   }}
-                  label="Diagnosis or symptom"
-                  placeholder="e.g. Morbus Perthes, Lower Back Pain"
-                  helperText="What this care provider helped you with."
+                  label={t('recommend.diagnosis')}
+                  placeholder={t('recommend.diagnosisPlaceholder')}
+                  helperText={t('recommend.diagnosisHelper')}
                 />
               );
             }}
@@ -188,25 +192,25 @@ export default function RecommendProvider() {
                 </Box>
               </li>
             )}
-            renderInput={(params) => <TextField {...params} label="Care providers that helped" />}
+            renderInput={(params) => <TextField {...params} label={t('recommend.providers')} />}
           />
 
           <TextField
-            label="What helped you"
+            label={t('recommend.details')}
             multiline
             minRows={5}
             required
             value={details}
             onChange={(e) => setDetails(e.target.value)}
-            helperText={`Positive details only (${details.trim().length}/2000).`}
+            helperText={t('recommend.detailsHelper', { count: details.trim().length })}
             inputProps={{ maxLength: 2000 }}
           />
 
           <Stack direction="row" spacing={2}>
             <Button type="submit" variant="contained" disabled={submit.isPending}>
-              {submit.isPending ? 'Submitting…' : 'Publish recommendation'}
+              {submit.isPending ? t('recommend.submitting') : t('recommend.publish')}
             </Button>
-            <Button component={Link} to="/clinics">Browse care providers</Button>
+            <Button component={Link} to="/clinics">{t('recommend.browse')}</Button>
           </Stack>
         </Stack>
       </Box>
