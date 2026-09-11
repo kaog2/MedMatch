@@ -9,6 +9,7 @@ import {
   Drawer,
   Divider,
   IconButton,
+  MenuItem,
   Paper,
   Stack,
   Switch,
@@ -33,6 +34,7 @@ export default function AdminPortal() {
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [notice, setNotice] = useState('');
+  const [errorNotice, setErrorNotice] = useState('');
 
   const users = useQuery({
     queryKey: ['admin-users', appliedSearch, page],
@@ -68,6 +70,16 @@ export default function AdminPortal() {
     },
   });
 
+  const changeRole = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) =>
+      api(`/admin/users/${id}/role`, { method: 'POST', body: JSON.stringify({ role }) }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['admin-users'] });
+      setNotice('User role updated.');
+    },
+    onError: (e) => setErrorNotice(e instanceof Error ? e.message : 'Unable to update role.'),
+  });
+
   const applySearch = () => {
     setAppliedSearch(search);
     setPage(1);
@@ -91,6 +103,7 @@ export default function AdminPortal() {
         </Box>
 
         {notice && <Alert severity="success" onClose={() => setNotice('')}>{notice}</Alert>}
+        {errorNotice && <Alert severity="error" onClose={() => setErrorNotice('')}>{errorNotice}</Alert>}
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
@@ -135,7 +148,20 @@ export default function AdminPortal() {
                       <Typography sx={{ fontWeight: 600 }}>{user.displayName || user.email}</Typography>
                       <Typography variant="caption" color="text.secondary">{user.email}</Typography>
                     </TableCell>
-                    <TableCell>{user.role}</TableCell>
+                    <TableCell>
+                      <TextField
+                        select
+                        size="small"
+                        value={user.role}
+                        onChange={(e) => changeRole.mutate({ id: user.id, role: e.target.value })}
+                        sx={{ minWidth: 110 }}
+                      >
+                        <MenuItem value="Patient">Patient</MenuItem>
+                        <MenuItem value="Clinic">Clinic</MenuItem>
+                        <MenuItem value="Doctor">Doctor</MenuItem>
+                        <MenuItem value="Admin">Admin</MenuItem>
+                      </TextField>
+                    </TableCell>
                     <TableCell>{[user.city, user.country].filter(Boolean).join(', ') || '—'}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

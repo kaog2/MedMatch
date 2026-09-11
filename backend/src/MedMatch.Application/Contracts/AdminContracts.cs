@@ -17,3 +17,5 @@ public sealed record AdminUserDto(
 );
 
 public sealed record UpdateActiveRequest(bool IsActive);
+
+public sealed record UpdateRoleRequest(string Role);

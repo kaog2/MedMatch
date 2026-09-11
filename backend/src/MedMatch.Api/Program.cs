@@ -472,6 +472,33 @@ api.MapPost("/admin/users/{id:guid}/active", async (Guid id, UpdateActiveRequest
     return Results.Ok(new { id = user.Id, isActive = user.IsActive });
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+api.MapPost("/admin/users/{id:guid}/role", async (Guid id, UpdateRoleRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+{
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var newRole))
+        return Results.BadRequest(new { error = "Invalid role. Use Patient, Clinic, Doctor or Admin." });
+
+    var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, ct);
+    if (user is null) return Results.NotFound();
+    if (user.Role == newRole) return Results.Ok(new { id = user.Id, role = user.Role.ToString() });
+
+    var currentAdminId = UserId(principal);
+
+    // An administrator cannot demote their own account (lockout protection).
+    if (id == currentAdminId && newRole != UserRole.Admin)
+        return Results.BadRequest(new { error = "You cannot change your own role." });
+
+    // Always keep at least one administrator.
+    if (user.Role == UserRole.Admin && newRole != UserRole.Admin)
+    {
+        var adminCount = await db.Users.CountAsync(x => x.Role == UserRole.Admin, ct);
+        if (adminCount <= 1) return Results.BadRequest(new { error = "At least one administrator must remain." });
+    }
+
+    user.Role = newRole;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { id = user.Id, role = user.Role.ToString() });
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+
 app.Run();
 
 static async Task<Recommendation?> LoadRecommendation(MedMatchDbContext db, Guid id, CancellationToken ct) =>
