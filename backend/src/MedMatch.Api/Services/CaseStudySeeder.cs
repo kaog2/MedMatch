@@ -86,7 +86,7 @@ public static class CaseStudySeeder
                 City = city,
                 Country = country,
                 Diagnoses = selectedDiagnoses,
-                Symptoms = selectedSymptoms,
+                Symptoms = string.Join(", ", selectedSymptoms),
                 Languages = random.Next(100) < 80 ? ["de"] : ["de", "en"],
                 Bio = random.Next(100) < 50
                     ? "Living with Perthes and sharing my hip replacement journey."

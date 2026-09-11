@@ -47,7 +47,7 @@ public sealed class PatientProfile
     public string? Country { get; set; }
     public string[] Diagnoses { get; set; } = [];
     public string[] Interventions { get; set; } = [];
-    public string[] Symptoms { get; set; } = [];
+    public string Symptoms { get; set; } = string.Empty;
     public string? AgeRange { get; set; }
     public string? Bio { get; set; }
     public string[] Languages { get; set; } = [];

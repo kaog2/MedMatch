@@ -57,6 +57,15 @@ export default function RecommendProvider() {
     onError: (e) => setError(e instanceof Error ? e.message : 'Unable to publish your recommendation.'),
   });
 
+  const addDiagnosis = (raw: string) => {
+    const name = raw.trim();
+    if (!name) return;
+    setSelectedDiagnoses((prev) =>
+      prev.some((d) => d.toLowerCase() === name.toLowerCase()) ? prev : [...prev, name]
+    );
+    setDiagnosisInput('');
+  };
+
   if (!hasRole(roles, 'Patient')) {
     return (
       <Paper sx={{ p: 3 }}>
@@ -134,9 +143,28 @@ export default function RecommendProvider() {
                 );
               })
             }
-            renderInput={(params) => (
-              <TextField {...params} label="Diagnosis or symptom" placeholder="e.g. Morbus Perthes, Lower Back Pain" helperText="What this care provider helped you with." />
-            )}
+            renderInput={(params) => {
+              const original = params.inputProps.onKeyDown as any;
+              return (
+                <TextField
+                  {...params}
+                  inputProps={{
+                    ...params.inputProps,
+                    onKeyDown: (e) => {
+                      if (e.key === 'Enter' && diagnosisInput.trim()) {
+                        e.preventDefault();
+                        addDiagnosis(diagnosisInput);
+                        return;
+                      }
+                      original?.(e);
+                    },
+                  }}
+                  label="Diagnosis or symptom"
+                  placeholder="e.g. Morbus Perthes, Lower Back Pain"
+                  helperText="What this care provider helped you with."
+                />
+              );
+            }}
           />
 
           <Autocomplete

@@ -256,7 +256,7 @@ api.MapDelete("/recommendations/{id:guid}", async (Guid id, ClaimsPrincipal prin
 api.MapGet("/clinic/patients", async (string? diagnosis, string? symptom, MedMatchDbContext db, CancellationToken ct) =>
 {
     var profiles = await db.PatientProfiles.Include(x => x.User).ThenInclude(x => x.ConsentSettings).Where(x => x.User.ConsentSettings!.ClinicsContactMe && x.User.ConsentSettings.DataForSearch).AsNoTracking().ToListAsync(ct);
-    return Results.Ok(profiles.Where(x => string.IsNullOrWhiteSpace(diagnosis) || x.Diagnoses.Any(v => v.Contains(diagnosis, StringComparison.OrdinalIgnoreCase))).Where(x => string.IsNullOrWhiteSpace(symptom) || x.Symptoms.Any(v => v.Contains(symptom, StringComparison.OrdinalIgnoreCase))).Select(x => new { x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms }));
+    return Results.Ok(profiles.Where(x => string.IsNullOrWhiteSpace(diagnosis) || x.Diagnoses.Any(v => v.Contains(diagnosis, StringComparison.OrdinalIgnoreCase))).Where(x => string.IsNullOrWhiteSpace(symptom) || (x.Symptoms ?? "").Contains(symptom, StringComparison.OrdinalIgnoreCase)).Select(x => new { x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms }));
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Clinic" });
 
 api.MapGet("/people", async (string? diagnosis, string? symptom, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
@@ -274,7 +274,7 @@ api.MapGet("/people", async (string? diagnosis, string? symptom, string? city, C
         .Where(x => string.IsNullOrWhiteSpace(diagNormalized) ||
                     x.Diagnoses.Any(v => NormalizeTag(v).Contains(diagNormalized)) ||
                     x.DiagnosisTags.Any(dt => dt.DiagnosisTag.Slug.Contains(diagNormalized) || NormalizeTag(dt.DiagnosisTag.Name).Contains(diagNormalized)))
-        .Where(x => string.IsNullOrWhiteSpace(symptom) || x.Symptoms.Any(v => v.Contains(symptom, StringComparison.OrdinalIgnoreCase)))
+        .Where(x => string.IsNullOrWhiteSpace(symptom) || (x.Symptoms ?? "").Contains(symptom, StringComparison.OrdinalIgnoreCase))
         .Where(x => string.IsNullOrWhiteSpace(city) || (x.City ?? "").Contains(city, StringComparison.OrdinalIgnoreCase))
         .Select(x => new PatientDirectoryDto(x.UserId, DisplayName(x), x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms, x.Bio, x.Languages));
     return Results.Ok(matches);
@@ -420,7 +420,7 @@ api.MapGet("/admin/users", async (string? search, string? role, int? page, int? 
         u.PatientProfile?.City,
         u.PatientProfile?.Country,
         u.PatientProfile?.Diagnoses ?? [],
-        u.PatientProfile?.Symptoms ?? [],
+        u.PatientProfile?.Symptoms ?? string.Empty,
         u.EmailConfirmed,
         u.IsActive,
         u.ConsentSettings?.PatientsContactMe ?? false,

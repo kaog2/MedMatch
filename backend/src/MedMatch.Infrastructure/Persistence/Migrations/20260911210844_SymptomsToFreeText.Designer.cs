@@ -3,6 +3,7 @@ using System;
 using MedMatch.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MedMatch.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MedMatchDbContext))]
-    partial class MedMatchDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260911210844_SymptomsToFreeText")]
+    partial class SymptomsToFreeText
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

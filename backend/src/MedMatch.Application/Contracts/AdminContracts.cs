@@ -8,7 +8,7 @@ public sealed record AdminUserDto(
     string? City,
     string? Country,
     string[] Diagnoses,
-    string[] Symptoms,
+    string Symptoms,
     bool EmailConfirmed,
     bool IsActive,
     bool PatientsContactMe,

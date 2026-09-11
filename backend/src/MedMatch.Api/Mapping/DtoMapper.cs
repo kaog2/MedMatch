@@ -10,7 +10,7 @@ public static class DtoMapper
     public static void ApplyProfile(PatientProfile profile, PatientProfileDto dto)
     {
         profile.DisplayMode = dto.DisplayMode; profile.Pseudonym = dto.Pseudonym; profile.RealName = dto.RealName; profile.City = dto.City; profile.Country = dto.Country;
-        profile.Diagnoses = (dto.Diagnoses ?? []).Select(CleanTagDisplay).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); profile.Interventions = dto.Interventions ?? []; profile.Symptoms = dto.Symptoms ?? []; profile.AgeRange = dto.AgeRange; profile.Bio = dto.Bio; profile.Languages = dto.Languages ?? [];
+        profile.Diagnoses = (dto.Diagnoses ?? []).Select(CleanTagDisplay).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(); profile.Interventions = dto.Interventions ?? []; profile.Symptoms = (dto.Symptoms ?? string.Empty).Trim(); profile.AgeRange = dto.AgeRange; profile.Bio = dto.Bio; profile.Languages = dto.Languages ?? [];
     }
 
     public static string CleanTagDisplay(string value)

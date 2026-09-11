@@ -99,7 +99,7 @@ public static class SampleDataSeeder
                 City = city,
                 Country = country,
                 Diagnoses = selectedDiagnoses,
-                Symptoms = selectedSymptoms,
+                Symptoms = string.Join(", ", selectedSymptoms),
                 Languages = random.Next(100) < 70 ? ["en"] : ["de", "en"],
                 Bio = Bios[random.Next(Bios.Length)]
             };

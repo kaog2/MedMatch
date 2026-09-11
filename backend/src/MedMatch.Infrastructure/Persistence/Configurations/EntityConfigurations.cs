@@ -18,7 +18,7 @@ public sealed class PatientProfileConfiguration : IEntityTypeConfiguration<Patie
 {
     public void Configure(EntityTypeBuilder<PatientProfile> builder)
     {
-        builder.ToTable("patient_profiles"); builder.HasKey(x => x.UserId); builder.Property(x => x.DisplayMode).HasConversion<string>().HasMaxLength(20); builder.Property(x => x.Diagnoses).HasColumnType("text[]"); builder.Property(x => x.Interventions).HasColumnType("text[]"); builder.Property(x => x.Symptoms).HasColumnType("text[]"); builder.Property(x => x.Languages).HasColumnType("text[]");
+        builder.ToTable("patient_profiles"); builder.HasKey(x => x.UserId); builder.Property(x => x.DisplayMode).HasConversion<string>().HasMaxLength(20); builder.Property(x => x.Diagnoses).HasColumnType("text[]"); builder.Property(x => x.Interventions).HasColumnType("text[]"); builder.Property(x => x.Languages).HasColumnType("text[]");
     }
 }
 public sealed class ConsentSettingsConfiguration : IEntityTypeConfiguration<ConsentSettings>

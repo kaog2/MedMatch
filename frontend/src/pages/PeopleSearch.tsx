@@ -128,12 +128,8 @@ export default function PeopleSearch() {
                       </Stack>
                     )}
 
-                    {person.symptoms.length > 0 && (
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        {person.symptoms.map((s) => (
-                          <Chip key={s} label={s} size="small" variant="outlined" />
-                        ))}
-                      </Stack>
+                    {person.symptoms && (
+                      <Typography variant="body2" color="text.secondary">Symptoms: {person.symptoms}</Typography>
                     )}
 
                     <Box sx={{ flexGrow: 1 }} />

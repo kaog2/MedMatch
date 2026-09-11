@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom';
 import { api, Consent, DiagnosisTag, Profile } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
 
-const empty: Profile = { displayMode: 'Anonymous', diagnoses: [], interventions: [], symptoms: [], languages: [] };
+const empty: Profile = { displayMode: 'Anonymous', diagnoses: [], interventions: [], symptoms: '', languages: [] };
 
 export default function PatientProfile() {
   const client = useQueryClient();
@@ -56,8 +56,18 @@ export default function PatientProfile() {
   if (profile.isLoading || consent.isLoading) return <Loading />;
   if (profile.error || consent.error) return <ErrorState error={profile.error ?? consent.error} />;
 
-  const array = (value: string) => value.split(',').map((x) => x.trim()).filter(Boolean);
   const update = (field: keyof Profile, value: string) => setForm({ ...form, [field]: value });
+  const addDiagnosis = (raw: string) => {
+    const name = raw.trim();
+    if (!name) return;
+    setForm((prev) => ({
+      ...prev,
+      diagnoses: prev.diagnoses.some((d) => d.toLowerCase() === name.toLowerCase())
+        ? prev.diagnoses
+        : [...prev.diagnoses, name],
+    }));
+    setDiagnosisInput('');
+  };
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -127,17 +137,31 @@ export default function PatientProfile() {
               </Box>
             </li>
           )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Diagnoses tags"
-              placeholder="Search or add diagnoses..."
-              helperText="Add standard tags or type custom conditions. Press Enter or comma to add a tag."
-            />
-          )}
+          renderInput={(params) => {
+            const original = params.inputProps.onKeyDown as any;
+            return (
+              <TextField
+                {...params}
+                inputProps={{
+                  ...params.inputProps,
+                  onKeyDown: (e) => {
+                    if (e.key === 'Enter' && diagnosisInput.trim()) {
+                      e.preventDefault();
+                      addDiagnosis(diagnosisInput);
+                      return;
+                    }
+                    original?.(e);
+                  },
+                }}
+                label="Diagnoses tags"
+                placeholder="Search or add diagnoses..."
+                helperText="Add standard tags or type custom conditions. Press Enter or comma to add a tag."
+              />
+            );
+          }}
         />
 
-        <TextField label="Symptoms" value={form.symptoms.join(', ')} onChange={(e) => setForm({ ...form, symptoms: array(e.target.value) })} />
+        <TextField label="Symptoms" multiline minRows={3} value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} helperText="Describe your symptoms in your own words — spaces and full sentences are fine." />
 
         {privacy && (
           <>

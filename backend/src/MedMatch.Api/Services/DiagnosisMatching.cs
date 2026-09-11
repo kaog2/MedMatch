@@ -117,6 +117,21 @@ public static class DiagnosisMatching
         return result;
     }
 
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "the", "and", "with", "for", "are", "was", "were", "have", "has", "had", "not", "but", "from",
+        "this", "that", "you", "your", "they", "them", "been", "being", "will", "would", "can", "could",
+        "should", "may", "might", "must", "than", "then", "also", "just", "very", "more", "most", "some"
+    };
+
+    private static string[] TokenizeSymptoms(string? text) =>
+        (text ?? string.Empty)
+            .Split(new[] { ' ', ',', '.', ';', ':', '!', '?', '\n', '\r', '\t', '-', '(', ')', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim().ToLowerInvariant())
+            .Where(w => w.Length >= 3 && !StopWords.Contains(w))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     public static (int Score, string[] SharedDiagnoses, string[] SharedSymptoms, bool SameLocation) EvaluateMatch(
         PatientProfile current,
         PatientProfile candidate)
@@ -138,10 +153,9 @@ public static class DiagnosisMatching
         double dice = totalDiagnoses > 0 ? (2.0 * sharedTagNames.Length) / totalDiagnoses : 0.0;
         double baseScore = 50.0 + (dice * 35.0);
 
-        var mySymptoms = (current.Symptoms ?? []).Select(s => s.Trim().ToLowerInvariant()).Where(s => s.Length > 0).ToHashSet();
-        var sharedSymptoms = (candidate.Symptoms ?? [])
-            .Where(s => mySymptoms.Contains(s.Trim().ToLowerInvariant()))
-            .Select(CleanTagDisplay)
+        var mySymptoms = TokenizeSymptoms(current.Symptoms);
+        var sharedSymptoms = TokenizeSymptoms(candidate.Symptoms)
+            .Where(s => mySymptoms.Contains(s))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         double symptomBonus = Math.Min(10.0, sharedSymptoms.Length * 4.0);
