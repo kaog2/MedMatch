@@ -263,5 +263,11 @@
   "googleSignIn": {
     "notConfigured": "Google-Anmeldung ist für diese Umgebung nicht konfiguriert.",
     "or": "ODER"
+  },
+  "translate": {
+    "translate": "Übersetzen",
+    "showOriginal": "Original anzeigen",
+    "translating": "Übersetzen…",
+    "error": "Übersetzung ist derzeit nicht verfügbar."
   }
 }

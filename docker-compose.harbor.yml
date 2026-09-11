@@ -20,6 +20,19 @@ services:
       timeout: 5s
       retries: 5
 
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: medmatch-libretranslate
+    restart: unless-stopped
+    environment:
+      LT_LOAD_ONLY: en,es,de,it
+    expose:
+      - "5000"
+    volumes:
+      - libretranslate_models:/home/libretranslate/.local/share/argos-translate/packages
+    networks:
+      - medmatch-network
+
   backend:
     image: ${HARBOR_REGISTRY:-registry.example.com}/${HARBOR_PROJECT:-medmatch}/backend:${IMAGE_TAG:-latest}
     container_name: medmatch-backend
@@ -53,6 +66,7 @@ services:
       LLM_MODERATION_API_KEY: ${LLM_MODERATION_API_KEY:-}
       LLM_MODERATION_MODEL: ${LLM_MODERATION_MODEL:-gpt-4o-mini}
       LLM_MODERATION_AUTO_APPROVE: ${LLM_MODERATION_AUTO_APPROVE:-false}
+      LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
     expose:
       - "8080"
     depends_on:
@@ -86,3 +100,4 @@ networks:
 
 volumes:
   postgres_data:
+  libretranslate_models:

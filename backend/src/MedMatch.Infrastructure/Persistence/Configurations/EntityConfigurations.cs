@@ -66,6 +66,19 @@ public sealed class DiagnosisTagTranslationConfiguration : IEntityTypeConfigurat
         builder.HasOne(x => x.DiagnosisTag).WithMany(x => x.Translations).HasForeignKey(x => x.DiagnosisTagId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+public sealed class TranslationCacheConfiguration : IEntityTypeConfiguration<TranslationCache>
+{
+    public void Configure(EntityTypeBuilder<TranslationCache> builder)
+    {
+        builder.ToTable("translation_cache"); builder.HasKey(x => x.Id);
+        builder.Property(x => x.SourceHash).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.SourceLanguage).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.TargetLanguage).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.SourceText).IsRequired();
+        builder.Property(x => x.TranslatedText).IsRequired();
+        builder.HasIndex(x => new { x.SourceHash, x.TargetLanguage }).IsUnique();
+    }
+}
 public sealed class PatientDiagnosisTagConfiguration : IEntityTypeConfiguration<PatientDiagnosisTag>
 {
     public void Configure(EntityTypeBuilder<PatientDiagnosisTag> builder)

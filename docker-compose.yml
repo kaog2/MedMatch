@@ -23,6 +23,22 @@ services:
       retries: 5
 
   # ─────────────────────────────────────────────────────────────
+  # Machine translation: LibreTranslate (self-hosted, on-demand)
+  # ─────────────────────────────────────────────────────────────
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: medmatch-libretranslate
+    restart: unless-stopped
+    environment:
+      LT_LOAD_ONLY: en,es,de,it
+    ports:
+      - "5001:5000"
+    volumes:
+      - libretranslate_models:/home/libretranslate/.local/share/argos-translate/packages
+    networks:
+      - medmatch-network
+
+  # ─────────────────────────────────────────────────────────────
   # Backend: .NET Core Web API
   # ─────────────────────────────────────────────────────────────
   backend:
@@ -66,6 +82,7 @@ services:
       LLM_MODERATION_API_KEY: ${LLM_MODERATION_API_KEY:-}
       LLM_MODERATION_MODEL: ${LLM_MODERATION_MODEL:-gpt-4o-mini}
       LLM_MODERATION_AUTO_APPROVE: ${LLM_MODERATION_AUTO_APPROVE:-true}
+      LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
     ports:
       - "5000:8080"
     depends_on:
@@ -125,3 +142,4 @@ networks:
 
 volumes:
   postgres_data:
+  libretranslate_models:

@@ -263,5 +263,11 @@
   "googleSignIn": {
     "notConfigured": "L'accesso con Google non è configurato per questo ambiente.",
     "or": "OPPURE"
+  },
+  "translate": {
+    "translate": "Traduci",
+    "showOriginal": "Mostra originale",
+    "translating": "Traduzione…",
+    "error": "La traduzione non è al momento disponibile."
   }
 }

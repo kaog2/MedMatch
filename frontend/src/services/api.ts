@@ -74,3 +74,11 @@ export type Recommendation = {
   createdAt: string;
 };
 export type CreateRecommendation = { clinicIds: string[]; diagnoses: string[]; details: string };
+
+export async function translateText(text: string, targetLanguage: string): Promise<string> {
+  const result = await api<{ translatedText: string }>('/translate', {
+    method: 'POST',
+    body: JSON.stringify({ text, targetLanguage }),
+  });
+  return result.translatedText;
+}

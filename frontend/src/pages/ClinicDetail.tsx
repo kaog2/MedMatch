@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api, Clinic, Recommendation, Review } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
+import TranslatableText from '../components/TranslatableText';
 
 export default function ClinicDetail() {
   const { t } = useTranslation();
@@ -44,7 +45,7 @@ export default function ClinicDetail() {
           <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ my: 1 }}>
             {rec.diagnoses.map((diagnosis) => <Chip key={diagnosis} label={diagnosis} size="small" color="primary" variant="outlined" />)}
           </Stack>
-          <Typography sx={{ my: 1 }}>{rec.details}</Typography>
+          <TranslatableText text={rec.details} sx={{ my: 1 }} />
         </Paper>
       ))}
       {recommendations.data?.length === 0 && <Alert severity="info">{t('clinicDetail.noRecommendations')}</Alert>}
@@ -59,7 +60,7 @@ export default function ClinicDetail() {
             <Rating value={review.rating} readOnly />
           </Stack>
           <Typography variant="body2" color="text.secondary">{review.authorDisplayName} · {new Date(review.createdAt).toLocaleDateString()}</Typography>
-          <Typography sx={{ my: 1 }}>{review.body}</Typography>
+          <TranslatableText text={review.body} sx={{ my: 1 }} />
           <Stack direction="row" spacing={1}>
             {review.tags.map((tag) => <Chip key={tag} label={tag} size="small" />)}
           </Stack>

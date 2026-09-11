@@ -263,5 +263,11 @@
   "googleSignIn": {
     "notConfigured": "Google sign-in is not configured for this environment.",
     "or": "OR"
+  },
+  "translate": {
+    "translate": "Translate",
+    "showOriginal": "Show original",
+    "translating": "Translating…",
+    "error": "Translation is currently unavailable."
   }
 }

@@ -263,5 +263,11 @@
   "googleSignIn": {
     "notConfigured": "El inicio de sesión con Google no está configurado en este entorno.",
     "or": "O"
+  },
+  "translate": {
+    "translate": "Traducir",
+    "showOriginal": "Ver original",
+    "translating": "Traduciendo…",
+    "error": "La traducción no está disponible en este momento."
   }
 }

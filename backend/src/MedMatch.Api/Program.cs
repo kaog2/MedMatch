@@ -23,6 +23,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHttpClient<IContentModerationService, ContentModerationService>();
+builder.Services.AddHttpClient<ITranslationService, TranslationService>();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -305,6 +306,17 @@ api.MapGet("/diagnosis-tags/suggest", async (string? q, HttpContext context, Med
         .Take(20).ToListAsync(ct);
     return Results.Ok(tags.Select(x => ToDiagnosisTagDto(x, culture)));
 }).RequireAuthorization();
+
+api.MapPost("/translate", async (TranslateRequest request, ITranslationService translator, CancellationToken ct) =>
+{
+    var text = (request.Text ?? string.Empty).Trim();
+    if (text.Length == 0) return Results.BadRequest(new { error = "Text is required." });
+    if (text.Length > 2000) return Results.BadRequest(new { error = "Text is too long to translate." });
+    var target = (request.TargetLanguage ?? "en").Trim().ToLowerInvariant();
+    if (target is not ("en" or "es" or "de" or "it")) return Results.BadRequest(new { error = "Unsupported target language." });
+    var translated = await translator.TranslateAsync(text, target, ct);
+    return translated is null ? Results.StatusCode(StatusCodes.Status503ServiceUnavailable) : Results.Ok(new TranslateResponse(translated));
+}).AllowAnonymous();
 
 api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {

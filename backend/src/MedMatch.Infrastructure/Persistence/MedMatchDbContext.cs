@@ -16,6 +16,7 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<DiagnosisTag> DiagnosisTags => Set<DiagnosisTag>();
     public DbSet<DiagnosisTagTranslation> DiagnosisTagTranslations => Set<DiagnosisTagTranslation>();
+    public DbSet<TranslationCache> TranslationCache => Set<TranslationCache>();
     public DbSet<PatientDiagnosisTag> PatientDiagnosisTags => Set<PatientDiagnosisTag>();
     public DbSet<MatchNotification> MatchNotifications => Set<MatchNotification>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();

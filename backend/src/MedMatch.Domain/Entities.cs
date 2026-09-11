@@ -74,6 +74,17 @@ public sealed class DiagnosisTagTranslation
     public string Name { get; set; } = string.Empty;
 }
 
+public sealed class TranslationCache
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string SourceHash { get; set; } = string.Empty;
+    public string SourceLanguage { get; set; } = string.Empty;
+    public string TargetLanguage { get; set; } = string.Empty;
+    public string SourceText { get; set; } = string.Empty;
+    public string TranslatedText { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
 public sealed class PatientDiagnosisTag
 {
     public Guid UserId { get; set; }
