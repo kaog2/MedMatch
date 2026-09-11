@@ -9,6 +9,7 @@ import PatientProfile from './pages/PatientProfile';
 import ClinicSearch from './pages/ClinicSearch';
 import ClinicDetail from './pages/ClinicDetail';
 import WriteReview from './pages/WriteReview';
+import RecommendProvider from './pages/RecommendProvider';
 import ClinicPatientSearch from './pages/ClinicPatientSearch';
 import PeopleSearch from './pages/PeopleSearch';
 import Matches from './pages/Matches';
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/clinics" element={<ClinicSearch />} />
           <Route path="/clinics/:id" element={<ClinicDetail />} />
           <Route path="/review/:clinicId" element={<WriteReview />} />
+          <Route path="/recommend" element={<RecommendProvider />} />
           <Route path="/profile" element={<PatientProfile />} />
           <Route path="/people" element={<PeopleSearch />} />
           <Route path="/matches" element={<Matches />} />

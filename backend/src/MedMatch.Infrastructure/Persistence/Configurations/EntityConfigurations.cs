@@ -75,3 +75,33 @@ public sealed class MatchNotificationConfiguration : IEntityTypeConfiguration<Ma
         builder.HasIndex(x => new { x.UserId, x.IsRead });
     }
 }
+public sealed class RecommendationConfiguration : IEntityTypeConfiguration<Recommendation>
+{
+    public void Configure(EntityTypeBuilder<Recommendation> builder)
+    {
+        builder.ToTable("recommendations"); builder.HasKey(x => x.Id);
+        builder.Property(x => x.Details).IsRequired().HasMaxLength(2000);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.ModerationNote).HasMaxLength(1000);
+        builder.HasOne(x => x.AuthorUser).WithMany(x => x.Recommendations).HasForeignKey(x => x.AuthorUserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.Status, x.CreatedAt });
+    }
+}
+public sealed class RecommendationClinicConfiguration : IEntityTypeConfiguration<RecommendationClinic>
+{
+    public void Configure(EntityTypeBuilder<RecommendationClinic> builder)
+    {
+        builder.ToTable("recommendation_clinics"); builder.HasKey(x => new { x.RecommendationId, x.ClinicId });
+        builder.HasOne(x => x.Recommendation).WithMany(x => x.Clinics).HasForeignKey(x => x.RecommendationId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.Clinic).WithMany(x => x.Recommendations).HasForeignKey(x => x.ClinicId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+public sealed class RecommendationDiagnosisTagConfiguration : IEntityTypeConfiguration<RecommendationDiagnosisTag>
+{
+    public void Configure(EntityTypeBuilder<RecommendationDiagnosisTag> builder)
+    {
+        builder.ToTable("recommendation_diagnosis_tags"); builder.HasKey(x => new { x.RecommendationId, x.DiagnosisTagId });
+        builder.HasOne(x => x.Recommendation).WithMany(x => x.DiagnosisTags).HasForeignKey(x => x.RecommendationId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.DiagnosisTag).WithMany(x => x.Recommendations).HasForeignKey(x => x.DiagnosisTagId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

@@ -57,3 +57,17 @@ export type AdminUser = {
   createdAt: string;
 };
 export type AdminUsersResponse = { total: number; page: number; pageSize: number; items: AdminUser[] };
+export type RecommendationStatus = 'Pending' | 'Approved' | 'Rejected';
+export type RecommendationClinic = { id: string; name: string; type: CareProviderType; city: string; country: string };
+export type Recommendation = {
+  id: string;
+  authorUserId: string;
+  authorDisplayName: string;
+  clinics: RecommendationClinic[];
+  diagnoses: string[];
+  details: string;
+  status: RecommendationStatus;
+  moderationNote?: string;
+  createdAt: string;
+};
+export type CreateRecommendation = { clinicIds: string[]; diagnoses: string[]; details: string };

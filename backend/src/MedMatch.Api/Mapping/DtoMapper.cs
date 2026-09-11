@@ -50,4 +50,19 @@ public static class DtoMapper
         var name = masked ? "Anonymous" : profile!.DisplayMode == DisplayMode.Pseudonym && !string.IsNullOrWhiteSpace(profile.Pseudonym) ? profile.Pseudonym : !string.IsNullOrWhiteSpace(profile!.RealName) ? profile.RealName : "Patient";
         return new(review.Id, review.ClinicId, review.DoctorId, review.Rating, review.Title, review.Body, review.Tags, masked, name, masked ? null : review.AuthorUserId, review.CreatedAt, review.UpdatedAt);
     }
+
+    public static RecommendationDto ToRecommendationDto(Recommendation recommendation)
+    {
+        var profile = recommendation.AuthorUser.PatientProfile;
+        var authorName = profile is null ? "MedMatch member" : DisplayName(profile);
+        var clinics = recommendation.Clinics
+            .Select(x => new RecommendationClinicDto(x.Clinic.Id, x.Clinic.Name, x.Clinic.Type, x.Clinic.City, x.Clinic.Country))
+            .OrderBy(x => x.Name)
+            .ToArray();
+        var diagnoses = recommendation.DiagnosisTags
+            .Select(x => x.DiagnosisTag.Name)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new(recommendation.Id, recommendation.AuthorUserId, authorName, clinics, diagnoses, recommendation.Details, recommendation.Status, recommendation.ModerationNote, recommendation.CreatedAt);
+    }
 }

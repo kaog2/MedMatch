@@ -112,6 +112,7 @@ export default function Navbar() {
   // Shared nav items for desktop and mobile
   const navItems: { to: string; label: string; show: boolean; badgeCount?: number }[] = [
     { to: '/clinics', label: 'Care providers', show: true },
+    { to: '/recommend', label: 'Recommend', show: role === 'Patient' },
     { to: '/people', label: 'People', show: role === 'Patient' },
     { to: '/matches', label: 'Matches', show: role === 'Patient', badgeCount: unreadMatches },
     { to: '/profile', label: 'Profile', show: role === 'Patient' },

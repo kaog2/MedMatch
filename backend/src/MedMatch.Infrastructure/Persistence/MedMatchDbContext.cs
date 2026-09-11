@@ -17,6 +17,9 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<DiagnosisTag> DiagnosisTags => Set<DiagnosisTag>();
     public DbSet<PatientDiagnosisTag> PatientDiagnosisTags => Set<PatientDiagnosisTag>();
     public DbSet<MatchNotification> MatchNotifications => Set<MatchNotification>();
+    public DbSet<Recommendation> Recommendations => Set<Recommendation>();
+    public DbSet<RecommendationClinic> RecommendationClinics => Set<RecommendationClinic>();
+    public DbSet<RecommendationDiagnosisTag> RecommendationDiagnosisTags => Set<RecommendationDiagnosisTag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

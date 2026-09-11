@@ -86,6 +86,37 @@ public static class DiagnosisMatching
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Resolves free-text diagnosis names to <see cref="DiagnosisTag"/> entities,
+    /// creating new tags when needed. New tags are attached to the context but not
+    /// yet saved; reference them through navigation properties before SaveChanges.
+    /// </summary>
+    public static async Task<List<DiagnosisTag>> ResolveDiagnosisTagsAsync(MedMatchDbContext db, string[] names, CancellationToken ct)
+    {
+        var cleanTags = names.Select(CleanTagDisplay).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var existing = await db.DiagnosisTags.ToListAsync(ct);
+        var byNormalized = existing.ToDictionary(x => NormalizeTag(x.Name), StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<DiagnosisTag>();
+        foreach (var input in cleanTags)
+        {
+            var norm = NormalizeTag(input);
+            if (byNormalized.TryGetValue(norm, out var tag))
+            {
+                result.Add(tag);
+                continue;
+            }
+
+            var slug = ToSlug(input);
+            if (string.IsNullOrEmpty(slug)) slug = "tag-" + Guid.NewGuid().ToString("n")[..8];
+            var created = new DiagnosisTag { Name = input, Slug = slug, UsageCount = 0 };
+            db.DiagnosisTags.Add(created);
+            byNormalized[norm] = created;
+            result.Add(created);
+        }
+        return result;
+    }
+
     public static (int Score, string[] SharedDiagnoses, string[] SharedSymptoms, bool SameLocation) EvaluateMatch(
         PatientProfile current,
         PatientProfile candidate)

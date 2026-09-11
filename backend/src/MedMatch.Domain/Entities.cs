@@ -3,6 +3,7 @@ namespace MedMatch.Domain;
 public enum UserRole { Patient, Clinic, Doctor, Admin }
 public enum DisplayMode { Anonymous, Pseudonym, RealName }
 public enum CareProviderType { Clinic, MedicalPractice, Doctor, Therapist, Hospital, Other }
+public enum RecommendationStatus { Pending, Approved, Rejected }
 
 public sealed class User
 {
@@ -19,6 +20,7 @@ public sealed class User
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } = new List<EmailVerificationToken>();
+    public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
 }
 
 public sealed class EmailVerificationToken
@@ -58,6 +60,7 @@ public sealed class DiagnosisTag
     public int UsageCount { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<PatientDiagnosisTag> Patients { get; set; } = new List<PatientDiagnosisTag>();
+    public ICollection<RecommendationDiagnosisTag> Recommendations { get; set; } = new List<RecommendationDiagnosisTag>();
 }
 
 public sealed class PatientDiagnosisTag
@@ -99,6 +102,7 @@ public sealed class Clinic
     public bool IsVerified { get; set; }
     public ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<RecommendationClinic> Recommendations { get; set; } = new List<RecommendationClinic>();
 }
 
 public sealed class Doctor
@@ -169,4 +173,39 @@ public sealed class RefreshToken
     public string TokenHash { get; set; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
+}
+
+/// <summary>
+/// A patient's positive endorsement of one or more care providers that helped
+/// with a specific diagnosis or symptom. Only Approved recommendations are
+/// publicly visible; new ones start Pending until moderation (human or LLM).
+/// </summary>
+public sealed class Recommendation
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid AuthorUserId { get; set; }
+    public User AuthorUser { get; set; } = null!;
+    public string Details { get; set; } = string.Empty;
+    public RecommendationStatus Status { get; set; } = RecommendationStatus.Pending;
+    public string? ModerationNote { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public ICollection<RecommendationClinic> Clinics { get; set; } = new List<RecommendationClinic>();
+    public ICollection<RecommendationDiagnosisTag> DiagnosisTags { get; set; } = new List<RecommendationDiagnosisTag>();
+}
+
+public sealed class RecommendationClinic
+{
+    public Guid RecommendationId { get; set; }
+    public Recommendation Recommendation { get; set; } = null!;
+    public Guid ClinicId { get; set; }
+    public Clinic Clinic { get; set; } = null!;
+}
+
+public sealed class RecommendationDiagnosisTag
+{
+    public Guid RecommendationId { get; set; }
+    public Recommendation Recommendation { get; set; } = null!;
+    public Guid DiagnosisTagId { get; set; }
+    public DiagnosisTag DiagnosisTag { get; set; } = null!;
 }

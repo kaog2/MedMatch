@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, AdminUser, AdminUsersResponse, Match } from '../services/api';
+import { api, AdminUser, AdminUsersResponse, Match, Recommendation } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
 
 export default function AdminPortal() {
@@ -51,6 +51,20 @@ export default function AdminPortal() {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['admin-users'] });
       setNotice('User status updated.');
+    },
+  });
+
+  const recommendations = useQuery({
+    queryKey: ['admin-recommendations'],
+    queryFn: () => api<Recommendation[]>('/admin/recommendations'),
+  });
+
+  const moderate = useMutation({
+    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+      api(`/admin/recommendations/${id}/moderate`, { method: 'POST', body: JSON.stringify({ approve }) }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['admin-recommendations'] });
+      setNotice('Recommendation updated.');
     },
   });
 
@@ -153,6 +167,63 @@ export default function AdminPortal() {
           <Typography alignSelf="center">Page {page} of {totalPages}</Typography>
           <Button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
         </Stack>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>Provider recommendations</Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+            Approve or reject positive provider recommendations submitted by patients.
+          </Typography>
+        </Box>
+
+        {recommendations.isLoading && <Loading />}
+        {recommendations.error && <ErrorState error={recommendations.error} />}
+
+        {recommendations.data && recommendations.data.length === 0 && (
+          <Typography color="text.secondary">No recommendations yet.</Typography>
+        )}
+
+        {recommendations.data?.map((rec) => (
+          <Card key={rec.id} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography sx={{ fontWeight: 700 }}>{rec.authorDisplayName}</Typography>
+                <Chip
+                  label={rec.status}
+                  size="small"
+                  sx={{
+                    fontWeight: 700,
+                    bgcolor: rec.status === 'Approved' ? '#00695c' : rec.status === 'Rejected' ? '#b3261e' : '#b06f42',
+                    color: '#fff',
+                  }}
+                />
+              </Stack>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                {rec.clinics.map((c) => <Chip key={c.id} label={c.name} size="small" variant="outlined" />)}
+              </Stack>
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                {rec.diagnoses.map((d) => <Chip key={d} label={d} size="small" color="primary" variant="outlined" />)}
+              </Stack>
+              <Typography sx={{ mt: 1 }}>{rec.details}</Typography>
+              {rec.moderationNote && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  Note: {rec.moderationNote}
+                </Typography>
+              )}
+              {rec.status === 'Pending' && (
+                <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                  <Button size="small" variant="contained" color="success" onClick={() => moderate.mutate({ id: rec.id, approve: true })}>
+                    Approve
+                  </Button>
+                  <Button size="small" variant="outlined" color="error" onClick={() => moderate.mutate({ id: rec.id, approve: false })}>
+                    Reject
+                  </Button>
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </Stack>
 
       <Drawer anchor="right" open={!!selectedUser} onClose={() => setSelectedUser(null)}>
