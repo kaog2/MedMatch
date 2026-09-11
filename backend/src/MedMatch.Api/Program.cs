@@ -56,6 +56,7 @@ using (var scope = app.Services.CreateScope())
         await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
     if (CaseStudySeeder.IsEnabled(builder.Configuration))
         await CaseStudySeeder.SeedAsync(db, passwords, CancellationToken.None);
+    await RestorePatientRolesAsync(db, CancellationToken.None);
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -524,6 +525,24 @@ static async Task<Recommendation?> LoadRecommendation(MedMatchDbContext db, Guid
         .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
         .AsNoTracking()
         .SingleOrDefaultAsync(x => x.Id == id, ct);
+
+/// <summary>
+/// Ensures users who still have a patient profile keep the Patient role.
+/// Covers accounts promoted to Admin before multi-role support existed.
+/// </summary>
+static async Task RestorePatientRolesAsync(MedMatchDbContext db, CancellationToken ct)
+{
+    var missing = await db.Users
+        .Include(x => x.Roles)
+        .Where(x => x.PatientProfile != null && !x.Roles.Any(r => r.Role == UserRole.Patient))
+        .ToListAsync(ct);
+
+    foreach (var user in missing)
+        user.Roles.Add(new UserRoleAssignment { Role = UserRole.Patient });
+
+    if (missing.Count > 0)
+        await db.SaveChangesAsync(ct);
+}
 
 
 
