@@ -49,6 +49,11 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MedMatchDbContext>();
     await db.Database.MigrateAsync();
     await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
+    if (SampleDataSeeder.IsEnabled(builder.Configuration))
+    {
+        var passwords = scope.ServiceProvider.GetRequiredService<PasswordHasher>();
+        await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
+    }
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -172,7 +177,7 @@ api.MapGet("/diagnosis-tags/suggest", async (string? q, MedMatchDbContext db, Ca
     return Results.Ok(tags.Select(ToDiagnosisTagDto));
 }).RequireAuthorization();
 
-api.MapGet("/matches", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
     var currentUserId = UserId(principal);
     var current = await db.PatientProfiles
@@ -206,6 +211,8 @@ api.MapGet("/matches", async (ClaimsPrincipal principal, MedMatchDbContext db, C
             };
         })
         .Where(x => x.Score > 0 && x.SharedDiagnoses.Length > 0)
+        .Where(x => string.IsNullOrWhiteSpace(country) || string.Equals(x.Profile.Country?.Trim(), country.Trim(), StringComparison.OrdinalIgnoreCase))
+        .Where(x => string.IsNullOrWhiteSpace(city) || (x.Profile.City ?? "").Contains(city.Trim(), StringComparison.OrdinalIgnoreCase))
         .OrderByDescending(x => x.Score)
         .ThenByDescending(x => x.SharedDiagnoses.Length)
         .Select(x => new MatchDto(

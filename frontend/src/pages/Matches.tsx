@@ -28,8 +28,14 @@ export default function Matches() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [connectMessage, setConnectMessage] = useState('');
   const [notice, setNotice] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [filters, setFilters] = useState('');
 
-  const matches = useQuery({ queryKey: ['matches'], queryFn: () => api<Match[]>('/matches') });
+  const matches = useQuery({
+    queryKey: ['matches', filters],
+    queryFn: () => api<Match[]>(`/matches?${filters}`),
+  });
   const notifications = useQuery({
     queryKey: ['match-notifications'],
     queryFn: () => api<MatchNotification[]>('/matches/notifications'),
@@ -65,6 +71,19 @@ export default function Matches() {
   const unreadCount = notifications.data?.filter((item) => !item.isRead).length ?? 0;
   const matchList = matches.data ?? [];
 
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    if (country.trim()) params.set('country', country.trim());
+    if (city.trim()) params.set('city', city.trim());
+    setFilters(params.toString());
+  };
+
+  const clearFilters = () => {
+    setCountry('');
+    setCity('');
+    setFilters('');
+  };
+
   return (
     <Container sx={{ py: { xs: 4, md: 6 } }}>
       <Stack spacing={4}>
@@ -88,6 +107,23 @@ export default function Matches() {
             on shared diagnosis tags, symptom overlap, and location proximity.
           </Typography>
         </Box>
+
+        <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+            <TextField size="small" label="Country" value={country} onChange={(e) => setCountry(e.target.value)} sx={{ minWidth: 180 }} />
+            <TextField size="small" label="City" value={city} onChange={(e) => setCity(e.target.value)} sx={{ minWidth: 180 }} />
+            <Button variant="contained" onClick={applyFilters} sx={{ bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}>
+              Filter
+            </Button>
+            <Button variant="text" onClick={clearFilters} color="inherit">Clear</Button>
+            <Box sx={{ flexGrow: 1 }} />
+            {!matches.isLoading && !matches.error && (
+              <Typography color="text.secondary" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {matchList.length} match{matchList.length === 1 ? '' : 'es'}
+              </Typography>
+            )}
+          </Stack>
+        </Card>
 
         {unreadCount > 0 && (
           <Alert
