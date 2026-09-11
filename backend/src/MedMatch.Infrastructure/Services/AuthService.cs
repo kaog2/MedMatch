@@ -39,6 +39,7 @@ public sealed class AuthService(MedMatchDbContext db, PasswordHasher passwords, 
         var user = await db.Users.SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !passwords.Verify(request.Password, user.PasswordHash)) return null;
         if (!user.EmailConfirmed) throw new InvalidOperationException("Please verify your email address before signing in.");
+        if (!user.IsActive) throw new InvalidOperationException("This account has been deactivated.");
         user.LastLogin = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);

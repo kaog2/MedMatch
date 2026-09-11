@@ -116,6 +116,7 @@ export default function Navbar() {
     { to: '/matches', label: 'Matches', show: role === 'Patient', badgeCount: unreadMatches },
     { to: '/profile', label: 'Profile', show: role === 'Patient' },
     { to: '/clinic-patients', label: 'Patients', show: role === 'Clinic' },
+    { to: '/admin', label: 'Admin', show: role === 'Admin' },
   ];
 
   return (

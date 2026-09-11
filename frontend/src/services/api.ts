@@ -41,3 +41,19 @@ export type MatchNotification = {
   createdAt: string;
 };
 export type MatchSummary = { unreadCount: number };
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: string;
+  displayName?: string;
+  city?: string;
+  country?: string;
+  diagnoses: string[];
+  symptoms: string[];
+  emailConfirmed: boolean;
+  isActive: boolean;
+  patientsContactMe: boolean;
+  dataForSearch: boolean;
+  createdAt: string;
+};
+export type AdminUsersResponse = { total: number; page: number; pageSize: number; items: AdminUser[] };

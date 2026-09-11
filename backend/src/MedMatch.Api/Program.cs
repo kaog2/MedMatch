@@ -47,13 +47,14 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MedMatchDbContext>();
+    var passwords = scope.ServiceProvider.GetRequiredService<PasswordHasher>();
     await db.Database.MigrateAsync();
     await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
+    await AdminSeeder.SeedAsync(db, passwords, builder.Configuration, CancellationToken.None);
     if (SampleDataSeeder.IsEnabled(builder.Configuration))
-    {
-        var passwords = scope.ServiceProvider.GetRequiredService<PasswordHasher>();
         await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
-    }
+    if (CaseStudySeeder.IsEnabled(builder.Configuration))
+        await CaseStudySeeder.SeedAsync(db, passwords, CancellationToken.None);
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -260,6 +261,93 @@ api.MapPost("/matches/notifications/read", async (Guid? id, ClaimsPrincipal prin
     await db.SaveChangesAsync(ct);
     return Results.NoContent();
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+
+api.MapGet("/admin/users", async (string? search, string? role, int? page, int? pageSize, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var query = db.Users.Include(x => x.PatientProfile).Include(x => x.ConsentSettings).AsNoTracking().AsQueryable();
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+        var term = search.Trim().ToLowerInvariant();
+        query = query.Where(x => x.Email.ToLower().Contains(term) || (x.PatientProfile != null && (x.PatientProfile.Pseudonym != null && x.PatientProfile.Pseudonym.ToLower().Contains(term) || x.PatientProfile.RealName != null && x.PatientProfile.RealName.ToLower().Contains(term))));
+    }
+    if (!string.IsNullOrWhiteSpace(role))
+    {
+        var parsed = Enum.TryParse<UserRole>(role, true, out var r);
+        if (parsed) query = query.Where(x => x.Role == r);
+    }
+
+    var size = Math.Clamp(pageSize ?? 25, 1, 100);
+    var currentPage = Math.Max(page ?? 1, 1);
+    var total = await query.CountAsync(ct);
+    var users = await query.OrderByDescending(x => x.CreatedAt).Skip((currentPage - 1) * size).Take(size).ToListAsync(ct);
+
+    var result = users.Select(u => new AdminUserDto(
+        u.Id,
+        u.Email,
+        u.Role.ToString(),
+        u.PatientProfile is null ? null : DisplayName(u.PatientProfile),
+        u.PatientProfile?.City,
+        u.PatientProfile?.Country,
+        u.PatientProfile?.Diagnoses ?? [],
+        u.PatientProfile?.Symptoms ?? [],
+        u.EmailConfirmed,
+        u.IsActive,
+        u.ConsentSettings?.PatientsContactMe ?? false,
+        u.ConsentSettings?.DataForSearch ?? false,
+        u.CreatedAt
+    ));
+
+    return Results.Ok(new { total, page = currentPage, pageSize = size, items = result });
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+
+api.MapGet("/admin/users/{id:guid}/matches", async (Guid id, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var target = await db.PatientProfiles
+        .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
+        .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
+        .SingleOrDefaultAsync(x => x.UserId == id, ct);
+
+    if (target is null) return Results.NotFound();
+
+    var candidates = await db.PatientProfiles
+        .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
+        .Include(x => x.DiagnosisTags).ThenInclude(x => x.DiagnosisTag)
+        .Where(x => x.UserId != id && x.User.ConsentSettings != null && x.User.ConsentSettings.PatientsContactMe && x.User.ConsentSettings.DataForSearch)
+        .AsNoTracking().ToListAsync(ct);
+
+    var matches = candidates
+        .Select(candidate =>
+        {
+            var (score, sharedDiagnoses, sharedSymptoms, sameLoc) = DiagnosisMatching.EvaluateMatch(target, candidate);
+            return new { Score = score, SharedDiagnoses = sharedDiagnoses, SharedSymptoms = sharedSymptoms, SameLocation = sameLoc, Profile = candidate };
+        })
+        .Where(x => x.Score > 0 && x.SharedDiagnoses.Length > 0)
+        .OrderByDescending(x => x.Score)
+        .ThenByDescending(x => x.SharedDiagnoses.Length)
+        .Select(x => new MatchDto(
+            x.Profile.UserId,
+            DisplayName(x.Profile),
+            x.Profile.City,
+            x.Profile.Country,
+            x.SharedDiagnoses,
+            x.SharedSymptoms,
+            x.SameLocation,
+            x.Score,
+            x.Profile.Bio,
+            x.Profile.Languages
+        ));
+
+    return Results.Ok(matches);
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+
+api.MapPost("/admin/users/{id:guid}/active", async (Guid id, UpdateActiveRequest request, MedMatchDbContext db, CancellationToken ct) =>
+{
+    var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, ct);
+    if (user is null) return Results.NotFound();
+    user.IsActive = request.IsActive;
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { id = user.Id, isActive = user.IsActive });
+}).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
 app.Run();
 

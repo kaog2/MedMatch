@@ -29,14 +29,50 @@ The main focus is **patient → care provider**, with provider-to-patient discov
 
 ---
 
+## How Peer Matching Works
+
+MedMatch connects patients who share similar conditions. It ranks people by how much their health profiles overlap, so the most relevant peers surface first.
+
+### 1. Normalized diagnosis tags
+
+Diagnoses are stored as normalized, deduplicated tags (for example `Morbus Perthes`, `LWS`, `Hip TEP Surgery`, `Lower Back Pain`). A shared vocabulary powers autocomplete in the profile form, and free-text entries are normalized into the same vocabulary — so `PERTHES` and `Morbus Perthes` map to the same tag.
+
+### 2. Similarity scoring
+
+For two patients A and B, the system computes a score in the range 0–100:
+
+- **Shared diagnoses** are the dominant signal, measured with the Sørensen–Dice coefficient:
+
+  $$\text{Dice}(A,B) = \frac{2 \times |A \cap B|}{|A| + |B|}$$
+
+- **Shared symptoms** add a smaller bonus.
+- **Location** adds a bonus when both share the same city (larger) or the same country (smaller).
+
+The final score is:
+
+$$\text{score} = 50 + 35 \times \text{Dice} + \text{symptom bonus} + \text{location bonus}$$
+
+clamped to 10–100. When two people share no diagnosis at all, the score is 0 and they are not shown to each other.
+
+### 3. Consent before anything else
+
+Only patients who have explicitly enabled both **"patients can contact me"** and **"use my data for search"** appear as candidates. Private email addresses are never exposed — contact happens through an in-app connection request.
+
+### 4. Ranking and filtering
+
+Matches are ordered by score descending, then by the number of shared diagnoses. The matches view also supports **country** and **city** filters so results can be narrowed by region.
+
+---
+
 ## Main Features (MVP)
 
 ### For Patients
 
 - Register and sign in with JWT-based authentication.
 - Sign up or sign in with Google when Google OAuth is configured.
+- Verify email addresses before a password account can sign in.
 - Patient profile with:
-  - Diagnoses (e.g., Morbus Perthes, osteoarthritis).
+  - Diagnoses (e.g., Morbus Perthes, osteoarthritis) with autocomplete suggestions.
   - Interventions (e.g., hip prosthesis).
   - Symptoms (e.g., lower back pain).
   - Location (city/country).
@@ -44,11 +80,12 @@ The main focus is **patient → care provider**, with provider-to-patient discov
 - Publish experiences and histories about care providers and therapies:
   - Rating (1–5 stars).
   - Experience text.
-  - Tags (Schmerztherapie, post-prosthesis, lower back pain, etc.).
+  - Tags.
   - Anonymity option (anonymous / pseudonym / real name).
   - Option to allow contact by other patients and/or clinics.
-  - Search for care providers by specialty, city, and therapy type.
+- Search for care providers by specialty, city, and therapy type.
 - Search for other patients by diagnosis, symptom, or city when both search and contact consent are enabled.
+- See ranked peer matches based on shared diagnoses, symptoms, and location.
 - Send a connection request without exposing private email addresses.
 
 ### For Care Providers
@@ -62,10 +99,17 @@ The main focus is **patient → care provider**, with provider-to-patient discov
 
 ### Administration
 
-- Moderation of reviews and profiles.
-- Management of reports and blocks.
-- Metrics dashboard (without sensitive data in plain text).
-- Tools to handle GDPR rights (export/delete user data).
+- Admin portal to review and search users.
+- Inspect the ranked diagnosis matches for any user.
+- Activate or deactivate accounts.
+- A seed administrator account is created on startup and configured through environment variables.
+
+### Development Data
+
+- Optional seeders insert fictional patients for local testing:
+  - 100 general sample patients.
+  - 50 patients focused on the Morbus Perthes / LWS / hip replacement case study.
+- Both seeders are idempotent and only run when explicitly enabled.
 
 ---
 
@@ -130,53 +174,58 @@ The project handles health-related information, so privacy is a core product req
 ### User
 
 - `id`, `email`, `password_hash`, `role`
+- `email_confirmed`, `is_active`
 - `created_at`, `last_login`
 
 ### PatientProfile
 
 - `user_id` (FK)
 - `display_mode`: `anonymous` | `pseudonym` | `real_name`
-- `contactable_by`: flags (`other_patients`, `clinics`)
-- `location`: city, country
-- `diagnoses`: array or related table
-- `interventions`: prosthesis, dates, etc.
-- `symptoms`: lower back pain, etc.
-- `age_range` or `birth_year`
+- `pseudonym`, `real_name`
+- `city`, `country`
+- `diagnoses`, `interventions`, `symptoms` (arrays)
 - `bio`, `languages`
+
+### DiagnosisTag / PatientDiagnosisTag
+
+- `diagnosis_tags`: normalized diagnosis vocabulary (`name`, `slug`, `usage_count`).
+- `patient_diagnosis_tags`: many-to-many join between a patient profile and its diagnosis tags.
+
+### MatchNotification
+
+- Records a ranked peer match (`user_id`, `matched_user_id`, `shared_diagnoses`, `score`, `is_read`).
+
+### ConsentSettings
+
+- `user_id` (FK)
+- `show_profile_publicly`
+- `patients_contact_me`
+- `clinics_contact_me`
+- `data_for_search`
+- `version`, `updated_at`, `ip`, `user_agent` (audit)
 
 ### Clinic / Doctor
 
-- `id`, `name`, `type`
+- `id`, `name`, `type` (clinic, practice, doctor, therapist, hospital, other)
 - `specialty`, `treatments_offered`
-- `address`, `city`, `country`, `coordinates`
-- `contact_info`
-- `verification_status`
+- `address`, `city`, `country`
+- `contact_info`, `public_website_url`
+- `publication_consent_granted`, `publication_consent_at`
+- `is_verified`
 
-### Recommendation / Review
+### Review
 
 - `id`, `author_user_id` (FK)
 - `clinic_id` / `doctor_id`
-- `rating` (1–5)
-- `title`, `body`
-- `tags`: array of strings
-- `is_anonymous`: bool
+- `rating` (1–5), `title`, `body`, `tags`
+- `is_anonymous`
 - `created_at`, `updated_at`
 
-### Consent & PrivacySettings
+### Message
 
-- `user_id`
-- `consent_show_profile_publicly`
-- `consent_clinics_contact_me`
-- `consent_patients_contact_me`
-- `consent_data_for_search`
-- `version`, `updated_at`, `ip`, `user_agent` (audit)
-
-### Message (Phase 2)
-
-- `id`, `from_user_id`, `to_user_id`
-- `thread_id`
+- `id`, `from_user_id`, `to_user_id`, `thread_id`
 - `content`, `created_at`
-- `consent_snapshot` (what consent existed when the thread was started)
+- `consent_snapshot` (the consent in effect when the thread started)
 
 ---
 
@@ -184,36 +233,25 @@ The project handles health-related information, so privacy is a core product req
 
 ```bash
 medmatch/
-  frontend/
-    # React + TypeScript
+  frontend/                 # React + TypeScript (Vite, Material UI)
     src/
       components/
       pages/
-      hooks/
       services/
-      styles/
-    Dockerfile
-    package.json
-
-  backend/
-    # .NET Core Web API
+  backend/                  # ASP.NET Core solution
     src/
-      MedMatch.Api/
-      MedMatch.Domain/
-      MedMatch.Infrastructure/
-      MedMatch.Application/
-    Dockerfile
-    MedMatch.sln
-
+      MedMatch.Api/         # API endpoints, mapping, services
+      MedMatch.Domain/      # Entities and enums
+      MedMatch.Application/ # Contracts and interfaces
+      MedMatch.Infrastructure/ # EF Core, migrations, auth/email services
   infra/
-    docker-compose.yml
-    nginx/
-    scripts/
-
-  infra/nginx/       # Reverse proxy configuration
-  docker-compose.yml # Local development stack
-  README.md          # Product overview
-  TECHNICAL_README.md
+    nginx/                  # Reverse proxy configuration
+  scripts/                  # Build and publish helpers
+  docker-compose.yml        # Local development stack
+  docker-compose.harbor.yml # Deployment stack
+  README.md                 # Product overview
+  TECHNICAL_README.md       # Architecture and API reference
+  PORTAINER_DEPLOYMENT.md   # Deployment runbook
 ```
 
 ---
@@ -235,28 +273,20 @@ git clone https://github.com/<your-account>/medmatch.git
 cd medmatch
 ```
 
-2. Start the development stack:
+2. Create a local, git-ignored `env.dev` file with your development values. The variable names are documented in `.env.example`.
+
+3. Start the development stack:
 
 ```bash
-docker compose up -d --build
+docker compose --env-file env.dev up -d --build
 ```
 
-Google sign-in is optional. To enable it, create a Google OAuth web client, add `http://localhost` as an authorized JavaScript origin, and set this value in `env.dev`:
-
-```env
-GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
-```
-
-Restart the stack after changing `.env`. Never commit OAuth secrets or credentials.
-
-Create the Mailcow mailbox before testing password registration. The development values use a mailbox such as `noreply@example.com`; replace `SMTP_PASSWORD` in `env.dev` with that mailbox's real password. The application uses Mailcow SMTP submission on port `587` with STARTTLS.
-
-This should start:
+This starts:
 
 - PostgreSQL
-- .NET Core Backend
-- React Frontend
-- Nginx (reverse proxy)
+- ASP.NET Core backend
+- React frontend (Vite)
+- Nginx reverse proxy
 
 4. Access the application:
 
@@ -265,32 +295,48 @@ This should start:
 - API: `http://localhost:5000`
 - API health check: `http://localhost:5000/health`
 
+### Optional integrations
+
+- **Google sign-in** — create a Google OAuth web client, add `http://localhost` as an authorized JavaScript origin, and set `GOOGLE_CLIENT_ID` in `env.dev`.
+- **Email verification** — provide SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`) in `env.dev`. The application sends a one-time verification link for password registrations.
+
+Never commit real credentials or secrets. Use placeholders and private environment files only.
+
+### Seed data for local testing
+
+Fictional data can be inserted on startup through environment flags:
+
+```env
+SEED_SAMPLE_DATA=true   # 100 general sample patients
+SEED_CASE_DATA=true     # 50 Morbus Perthes / LWS / hip replacement patients
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me
+```
+
+The seeders are idempotent (they skip when the sample users already exist) and create a configured administrator account for the admin portal.
+
 For architecture, API routes, database details, testing, and deployment notes, see [TECHNICAL_README.md](TECHNICAL_README.md).
 
 ---
 
 ## Roadmap
 
-### Phase 1 – MVP (4–6 weeks)
+Already implemented:
 
-- User authentication and registration.
-- Patient profiles with anonymity and contact options.
-- CRUD for clinics and reviews.
-- Clinic search and filtering by tags/diagnoses/symptoms.
-- Privacy policy and consent texts reviewed for the target deployment.
+- JWT authentication, refresh tokens, Google sign-in, email verification.
+- Patient profiles with anonymity, consent, and diagnosis tags.
+- Care provider directory with explicit publication consent.
+- Reviews and patient experiences.
+- Peer matching (ranked by shared diagnoses, symptoms, and location) with connection requests.
+- Admin portal for user management and match inspection.
 
-### Phase 2 – Messaging and Clinics (4–6 weeks)
+Upcoming:
 
-- Patient ↔ patient messaging (when the author allows it).
-- Verification of clinics and doctors.
-- Optional feature: clinics search for contactable patients.
-- Administration and moderation panel.
-
-### Phase 3 – GDPR and Production
-
-- User data export and deletion.
-- Security audits, logs, and documented DPIA.
-- Security improvements, monitoring, and scaling on Azure.
+- Patient ↔ patient messaging and an inbox.
+- Provider verification workflow.
+- Reports, moderation, and blocking.
+- GDPR tooling: data export, deletion, and documented DPIA.
+- Production hardening: secrets management, rate limiting, observability, and automated tests.
 
 ---
 

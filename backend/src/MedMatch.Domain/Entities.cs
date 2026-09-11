@@ -13,6 +13,7 @@ public sealed class User
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLogin { get; set; }
     public bool EmailConfirmed { get; set; }
+    public bool IsActive { get; set; } = true;
     public PatientProfile? PatientProfile { get; set; }
     public ConsentSettings? ConsentSettings { get; set; }
     public ICollection<Review> Reviews { get; set; } = new List<Review>();

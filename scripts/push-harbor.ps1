@@ -1,6 +1,6 @@
 param(
     [string]$Tag = "",
-    [string]$Registry = "harbor.kevdevs.org",
+    [string]$Registry = "registry.example.com",
     [string]$Project = "medmatch",
     [string]$GoogleClientId = $env:GOOGLE_CLIENT_ID
 )
