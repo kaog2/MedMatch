@@ -114,7 +114,7 @@ export default function AdminPortal() {
             onKeyDown={(e) => e.key === 'Enter' && applySearch()}
             sx={{ minWidth: 260 }}
           />
-          <Button variant="contained" onClick={applySearch} sx={{ bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}>
+          <Button variant="contained" onClick={applySearch}>
             Search
           </Button>
           {users.data && (

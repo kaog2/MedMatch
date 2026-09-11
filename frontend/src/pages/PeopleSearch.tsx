@@ -122,7 +122,11 @@ export default function PeopleSearch() {
                             key={diag}
                             label={diag}
                             size="small"
-                            sx={{ bgcolor: 'rgba(0,105,92,.12)', color: '#004d40', fontWeight: 600 }}
+                            sx={(theme) => ({
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.12)',
+                              color: theme.palette.mode === 'dark' ? '#9ce8dd' : '#004d40',
+                              fontWeight: 600,
+                            })}
                           />
                         ))}
                       </Stack>
@@ -136,7 +140,7 @@ export default function PeopleSearch() {
                     <Button
                       variant="contained"
                       onClick={() => setSelected(person)}
-                      sx={{ alignSelf: 'flex-start', bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}
+                      sx={{ alignSelf: 'flex-start' }}
                     >
                       Request connection
                     </Button>
@@ -261,7 +265,7 @@ function PaperSearch({
         <Button
           variant="contained"
           onClick={search}
-          sx={{ alignSelf: 'flex-end', bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}
+          sx={{ alignSelf: 'flex-end' }}
         >
           Search people
         </Button>

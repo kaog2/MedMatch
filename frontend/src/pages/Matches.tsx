@@ -112,7 +112,7 @@ export default function Matches() {
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
             <TextField size="small" label="Country" value={country} onChange={(e) => setCountry(e.target.value)} sx={{ minWidth: 180 }} />
             <TextField size="small" label="City" value={city} onChange={(e) => setCity(e.target.value)} sx={{ minWidth: 180 }} />
-            <Button variant="contained" onClick={applyFilters} sx={{ bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}>
+            <Button variant="contained" onClick={applyFilters}>
               Filter
             </Button>
             <Button variant="text" onClick={clearFilters} color="inherit">Clear</Button>
@@ -146,7 +146,7 @@ export default function Matches() {
             <Typography color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mb: 3 }}>
               Make sure you have saved diagnosis tags on your profile and verified that both peer contact and profile search are enabled in your consent settings.
             </Typography>
-            <Button variant="contained" component={Link} to="/profile" sx={{ bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}>
+            <Button variant="contained" component={Link} to="/profile">
               Update Profile & Tags
             </Button>
           </Card>
@@ -196,12 +196,12 @@ export default function Matches() {
                         <Chip
                           label="Local match (same city)"
                           size="small"
-                          sx={{
-                            bgcolor: 'rgba(0,105,92,.08)',
-                            color: '#00695c',
+                          sx={(theme) => ({
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.08)',
+                            color: theme.palette.mode === 'dark' ? '#4db6ac' : '#00695c',
                             fontWeight: 600,
                             fontSize: '.7rem',
-                          }}
+                          })}
                         />
                       </Box>
                     )}
@@ -216,11 +216,11 @@ export default function Matches() {
                             key={diagnosis}
                             label={diagnosis}
                             size="small"
-                            sx={{
-                              bgcolor: 'rgba(0,105,92,.12)',
-                              color: '#004d40',
+                            sx={(theme) => ({
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.12)',
+                              color: theme.palette.mode === 'dark' ? '#9ce8dd' : '#004d40',
                               fontWeight: 600,
-                            }}
+                            })}
                           />
                         ))}
                       </Stack>
@@ -252,11 +252,9 @@ export default function Matches() {
                       variant="contained"
                       onClick={() => setSelectedMatch(match)}
                       sx={{
-                        bgcolor: '#102a2b',
                         borderRadius: '9999px',
                         textTransform: 'none',
                         fontWeight: 600,
-                        '&:hover': { bgcolor: '#1d4647' },
                       }}
                     >
                       Request connection
@@ -298,7 +296,6 @@ export default function Matches() {
                 })
               }
               disabled={sendRequest.isPending}
-              sx={{ bgcolor: '#102a2b', '&:hover': { bgcolor: '#1d4647' } }}
             >
               {sendRequest.isPending ? 'Sending...' : 'Send request'}
             </Button>

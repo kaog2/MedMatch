@@ -114,7 +114,11 @@ export default function PatientProfile() {
                   key={key}
                   label={typeof option === 'string' ? option : option.name}
                   size="small"
-                  sx={{ bgcolor: 'rgba(0,105,92,.12)', color: '#004d40', fontWeight: 600 }}
+                  sx={(theme) => ({
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.12)',
+                    color: theme.palette.mode === 'dark' ? '#9ce8dd' : '#004d40',
+                    fontWeight: 600,
+                  })}
                   {...tagProps}
                 />
               );

@@ -8,7 +8,7 @@ const highlights = [
 ];
 
 export default function Home() {
-  return <Box sx={{ bgcolor: '#f3f0e9', color: '#102a2b', minHeight: 'calc(100vh - 64px)' }}>
+  return <Box sx={{ bgcolor: 'background.default', color: 'text.primary', minHeight: 'calc(100vh - 64px)' }}>
     <Box sx={{ bgcolor: '#102a2b', color: '#f8f6f0', overflow: 'hidden', position: 'relative' }}>
       <Box sx={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', bgcolor: '#d2e7d9', opacity: .14, right: '-100px', top: '-160px' }} />
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 13 }, position: 'relative' }}>
@@ -34,11 +34,11 @@ export default function Home() {
     </Box>
     <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
       <Grid container spacing={3}>
-        {highlights.map((highlight) => <Grid item xs={12} md={4} key={highlight.number}><Box sx={{ borderTop: '2px solid #102a2b', pt: 2.5, height: '100%' }}><Typography sx={{ color: '#b06f42', fontWeight: 800 }}>{highlight.number}</Typography><Typography variant="h5" sx={{ fontWeight: 800, mt: 5, letterSpacing: '-.03em' }}>{highlight.title}</Typography><Typography sx={{ color: 'rgba(16,42,43,.7)', lineHeight: 1.65, mt: 2 }}>{highlight.text}</Typography></Box></Grid>)}
+        {highlights.map((highlight) => <Grid item xs={12} md={4} key={highlight.number}><Box sx={{ borderTop: '2px solid', borderColor: 'divider', pt: 2.5, height: '100%' }}><Typography sx={{ color: '#b06f42', fontWeight: 800 }}>{highlight.number}</Typography><Typography variant="h5" sx={{ fontWeight: 800, mt: 5, letterSpacing: '-.03em' }}>{highlight.title}</Typography><Typography sx={{ color: 'text.secondary', lineHeight: 1.65, mt: 2 }}>{highlight.text}</Typography></Box></Grid>)}
       </Grid>
       <Box sx={{ mt: { xs: 9, md: 13 }, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
         <Box><Typography sx={{ color: '#b06f42', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', fontSize: '.75rem' }}>Start where you are</Typography><Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: '-.05em', mt: 1 }}>Your next step can be simple.</Typography></Box>
-        <Button component={Link} to="/clinics" variant="contained" size="large" sx={{ bgcolor: '#102a2b', px: 3, py: 1.5, '&:hover': { bgcolor: '#1d4647' } }}>Browse the directory</Button>
+        <Button component={Link} to="/clinics" variant="contained" size="large" sx={{ px: 3, py: 1.5 }}>Browse the directory</Button>
       </Box>
     </Container>
   </Box>;

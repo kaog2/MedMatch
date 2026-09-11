@@ -1,5 +1,6 @@
 import {
   AppBar,
+  Avatar,
   Badge,
   Box,
   Button,
@@ -13,6 +14,7 @@ import {
   Stack,
   SvgIcon,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -22,6 +24,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore, hasRole } from '../store';
 import { api, MatchSummary } from '../services/api';
+import { useColorMode } from '../theme';
 import MedMatchIcon from './MedMatchIcon';
 
 function MenuIcon() {
@@ -38,6 +41,31 @@ function CloseIcon() {
       <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </SvgIcon>
   );
+}
+
+function SunIcon() {
+  return (
+    <SvgIcon viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </SvgIcon>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <SvgIcon viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </SvgIcon>
+  );
+}
+
+/** Up to two initials derived from an email address local part (e.g. jane.doe → JD). */
+function initialsFrom(email: string): string {
+  const local = email.split('@')[0] ?? '';
+  const parts = local.split(/[._\-+]+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
+  return initials || local.slice(0, 2).toUpperCase() || '?';
 }
 
 /** Pill-style navigation link for the desktop navbar. */
@@ -89,11 +117,13 @@ function NavPill({ to, label, badgeCount }: { to: string; label: string; badgeCo
 }
 
 export default function Navbar() {
-  const { roles, signOut } = useAuthStore();
+  const { roles, email, signOut } = useAuthStore();
+  const { mode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const initials = initialsFrom(email);
 
   const { data: matchSummary } = useQuery({
     queryKey: ['match-summary'],
@@ -211,27 +241,58 @@ export default function Navbar() {
                   sx={{ mx: 1, borderColor: 'rgba(255,255,255,.1)', alignSelf: 'center', height: 20 }}
                 />
 
-                {roles.length > 0 ? (
-                  <Button
-                    onClick={handleSignOut}
+                <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+                  <IconButton
+                    onClick={toggleColorMode}
+                    aria-label="Toggle color mode"
                     sx={{
-                      color: '#fff',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '.875rem',
-                      px: 2.5,
-                      py: 0.75,
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(255,255,255,.65)',
-                      transition: 'all .15s ease',
-                      '&:hover': {
-                        borderColor: '#fff',
-                        bgcolor: 'rgba(255,255,255,.1)',
-                      },
+                      color: 'rgba(248,246,240,.8)',
+                      '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
                     }}
                   >
-                    Sign out
-                  </Button>
+                    {mode === 'dark' ? <SunIcon /> : <MoonIcon />}
+                  </IconButton>
+                </Tooltip>
+
+                {roles.length > 0 ? (
+                  <>
+                    <Tooltip title={email || 'Signed in'}>
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: '#f2b880',
+                          color: '#102a2b',
+                          fontWeight: 800,
+                          fontSize: '.85rem',
+                          letterSpacing: '.02em',
+                          border: '2px solid rgba(255,255,255,.25)',
+                        }}
+                      >
+                        {initials}
+                      </Avatar>
+                    </Tooltip>
+                    <Button
+                      onClick={handleSignOut}
+                      sx={{
+                        color: '#fff',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '.875rem',
+                        px: 2.5,
+                        py: 0.75,
+                        borderRadius: '9999px',
+                        border: '1px solid rgba(255,255,255,.65)',
+                        transition: 'all .15s ease',
+                        '&:hover': {
+                          borderColor: '#fff',
+                          bgcolor: 'rgba(255,255,255,.1)',
+                        },
+                      }}
+                    >
+                      Sign out
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     component={Link}
@@ -258,20 +319,32 @@ export default function Navbar() {
               </Stack>
             )}
 
-            {/* ---- Mobile hamburger ---- */}
+            {/* ---- Mobile: theme toggle + hamburger ---- */}
             {isMobile && (
-              <IconButton
-                onClick={() => setDrawerOpen(true)}
-                sx={{
-                  color: 'rgba(248,246,240,.8)',
-                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
-                }}
-                aria-label="Open navigation menu"
-              >
-                <Badge badgeContent={unreadMatches} color="error" variant="dot" invisible={unreadMatches === 0}>
-                  <MenuIcon />
-                </Badge>
-              </IconButton>
+              <Stack direction="row" alignItems="center" spacing={0.25}>
+                <IconButton
+                  onClick={toggleColorMode}
+                  aria-label="Toggle color mode"
+                  sx={{
+                    color: 'rgba(248,246,240,.8)',
+                    '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
+                  }}
+                >
+                  {mode === 'dark' ? <SunIcon /> : <MoonIcon />}
+                </IconButton>
+                <IconButton
+                  onClick={() => setDrawerOpen(true)}
+                  sx={{
+                    color: 'rgba(248,246,240,.8)',
+                    '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,.1)' },
+                  }}
+                  aria-label="Open navigation menu"
+                >
+                  <Badge badgeContent={unreadMatches} color="error" variant="dot" invisible={unreadMatches === 0}>
+                    <MenuIcon />
+                  </Badge>
+                </IconButton>
+              </Stack>
             )}
           </Toolbar>
         </Container>
@@ -302,6 +375,41 @@ export default function Navbar() {
         </Box>
 
         <Divider sx={{ borderColor: 'rgba(255,255,255,.08)' }} />
+
+        {roles.length > 0 && (
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                bgcolor: '#f2b880',
+                color: '#102a2b',
+                fontWeight: 800,
+                fontSize: '.95rem',
+                letterSpacing: '.02em',
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '.9rem',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {email || 'Signed in'}
+              </Typography>
+              <Typography sx={{ fontSize: '.72rem', color: 'rgba(248,246,240,.55)' }}>
+                {roles.join(', ')}
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         <List sx={{ px: 1, py: 1.5 }}>
           {navItems
