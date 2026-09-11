@@ -1,8 +1,7 @@
 param(
     [string]$Tag = "",
     [string]$Registry = "registry.example.com",
-    [string]$Project = "medmatch",
-    [string]$GoogleClientId = $env:GOOGLE_CLIENT_ID
+    [string]$Project = "medmatch"
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,9 +11,9 @@ $frontendImage = "$Registry/$Project/frontend:$versionTag"
 $backendLatestImage = "$Registry/$Project/backend:latest"
 $frontendLatestImage = "$Registry/$Project/frontend:latest"
 
-if ([string]::IsNullOrWhiteSpace($GoogleClientId)) {
-    throw "Set GOOGLE_CLIENT_ID before building the frontend image."
-}
+# No secrets are passed here: the Google OAuth client id is injected at
+# container start (docker-entrypoint.sh -> /config.js), never baked into
+# the image. See docker-compose.harbor.yml for the GOOGLE_CLIENT_ID env var.
 
 Write-Host "Building and pushing multi-architecture $backendImage and $backendLatestImage"
 docker buildx build --platform linux/amd64,linux/arm64 --push `
@@ -24,8 +23,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Building and pushing multi-architecture $frontendImage and $frontendLatestImage"
 docker buildx build --platform linux/amd64,linux/arm64 --push --target production `
-    --build-arg VITE_API_URL= `
-    --build-arg VITE_GOOGLE_CLIENT_ID=$GoogleClientId `
     -t $frontendImage `
     -t $frontendLatestImage ./frontend
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

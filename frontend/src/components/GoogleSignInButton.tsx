@@ -1,12 +1,15 @@
 import { Alert, Box, Divider, Typography } from '@mui/material';
 import { useEffect, useRef } from 'react';
 
-const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+// Prefer the runtime-injected config (written by the container entrypoint from
+// env vars) so the client id never has to be baked into the image. Fall back
+// to the Vite build-time variable for local development.
+const clientId = window.__MEDMATCH_CONFIG__?.GOOGLE_CLIENT_ID || (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined);
 
 type GoogleCredentialResponse = { credential: string };
 type GoogleAccounts = { id: { initialize: (options: { client_id: string; callback: (response: GoogleCredentialResponse) => void }) => void; renderButton: (element: HTMLElement, options: { theme: string; size: string; width: number }) => void } };
 
-declare global { interface Window { google?: { accounts: GoogleAccounts } } }
+declare global { interface Window { google?: { accounts: GoogleAccounts }; __MEDMATCH_CONFIG__?: { GOOGLE_CLIENT_ID?: string; API_URL?: string } } }
 
 export default function GoogleSignInButton({ onCredential }: { onCredential: (credential: string) => void }) {
   const buttonRef = useRef<HTMLDivElement>(null);

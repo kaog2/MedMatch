@@ -57,6 +57,10 @@ services:
     image: ${HARBOR_REGISTRY:-registry.example.com}/${HARBOR_PROJECT:-medmatch}/frontend:${IMAGE_TAG:-latest}
     container_name: medmatch-frontend
     restart: unless-stopped
+    environment:
+      # Injected at runtime by docker-entrypoint.sh into /config.js.
+      # Not baked into the image.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     expose:
       - "80"
     depends_on:
