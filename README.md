@@ -45,7 +45,7 @@ For two patients A and B, the system computes a score in the range 0–100:
 
   $$\text{Dice}(A,B) = \frac{2 \times |A \cap B|}{|A| + |B|}$$
 
-- **Shared symptoms** add a smaller bonus.
+- **Shared symptoms** add a smaller bonus. Symptoms are stored as free text; the system tokenizes them into meaningful words (dropping stopwords like *the*, *and*, *with*) and overlaps those word sets.
 - **Location** adds a bonus when both share the same city (larger) or the same country (smaller).
 
 The final score is:
@@ -61,6 +61,16 @@ Only patients who have explicitly enabled both **"patients can contact me"** and
 ### 4. Ranking and filtering
 
 Matches are ordered by score descending, then by the number of shared diagnoses. The matches view also supports **country** and **city** filters so results can be narrowed by region.
+
+### 5. Symptoms as free text and tag extraction
+
+Symptoms can be written as free text (spaces and full sentences). To make that text useful for matching, MedMatch can extract recognized diagnosis tags from it:
+
+- `SYMPTOM_TAG_EXTRACTION=dictionary` (default) — matches the words of the symptom text against the known `diagnosis_tags`; a tag is added when all of its meaningful words appear in the text.
+- `SYMPTOM_TAG_EXTRACTION=off` — symptoms stay as plain text and only participate through the word-overlap bonus above.
+- `SYMPTOM_TAG_EXTRACTION=llm` — planned: extract tags with an LLM via `LLM_MODERATION_API_URL` / `LLM_MODERATION_API_KEY` (currently falls back to dictionary matching).
+
+Extracted tags join the same `diagnosis_tags` vocabulary, so they feed the Dice-based matching directly.
 
 ---
 

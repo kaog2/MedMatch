@@ -88,13 +88,14 @@ api.MapGet("/profile", async (ClaimsPrincipal principal, MedMatchDbContext db, C
 {
     var profile = await db.PatientProfiles.FindAsync([UserId(principal)], ct); return profile is null ? Results.NotFound() : Results.Ok(ToProfileDto(profile));
 }).RequireAuthorization();
-api.MapPut("/profile", async (PatientProfileDto dto, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+api.MapPut("/profile", async (PatientProfileDto dto, ClaimsPrincipal principal, MedMatchDbContext db, IConfiguration configuration, CancellationToken ct) =>
 {
     var userId = UserId(principal);
     var profile = await db.PatientProfiles.Include(x => x.DiagnosisTags).SingleOrDefaultAsync(x => x.UserId == userId, ct);
     if (profile is null) return Results.NotFound();
     ApplyProfile(profile, dto);
     await DiagnosisMatching.SyncDiagnosisTagsAsync(profile, dto.Diagnoses ?? [], db, ct);
+    await SymptomTagExtraction.EnrichFromSymptomsAsync(profile, db, configuration, ct);
     await db.SaveChangesAsync(ct);
     await DiagnosisMatching.RefreshTagUsageCountsAsync(db, ct);
     await DiagnosisMatching.ComputeMatchesAsync(userId, db, ct);

@@ -117,14 +117,14 @@ public static class DiagnosisMatching
         return result;
     }
 
-    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    internal static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "the", "and", "with", "for", "are", "was", "were", "have", "has", "had", "not", "but", "from",
         "this", "that", "you", "your", "they", "them", "been", "being", "will", "would", "can", "could",
         "should", "may", "might", "must", "than", "then", "also", "just", "very", "more", "most", "some"
     };
 
-    private static string[] TokenizeSymptoms(string? text) =>
+    internal static string[] TokenizeSymptoms(string? text) =>
         (text ?? string.Empty)
             .Split(new[] { ' ', ',', '.', ';', ':', '!', '?', '\n', '\r', '\t', '-', '(', ')', '/' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(w => w.Trim().ToLowerInvariant())
