@@ -26,10 +26,11 @@ services:
     restart: unless-stopped
     environment:
       LT_LOAD_ONLY: en,es,de,it
+      LT_UPDATE_MODELS: "true"
     expose:
       - "5000"
     volumes:
-      - libretranslate_models:/home/libretranslate/.local/share/argos-translate/packages
+      - libretranslate_models:/home/libretranslate/.local/share/argos-translate
     networks:
       - medmatch-network
 
