@@ -30,7 +30,7 @@ services:
     expose:
       - "5000"
     volumes:
-      - libretranslate_models:/home/libretranslate/.local/share/argos-translate
+      - libretranslate_models:/home/libretranslate/.local/share
     networks:
       - medmatch-network
 
