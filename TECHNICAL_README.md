@@ -283,6 +283,43 @@ dotnet ef migrations add DescribeTheChange \
 
 Review migrations before applying them. The application applies migrations automatically at startup for local development; production deployments should use a controlled migration step.
 
+## Observability (Logs, Metrics, Traces)
+
+MedMatch includes full-stack OpenTelemetry observability integrated into Grafana Alloy, Prometheus, and Loki.
+
+### Endpoints and Configuration
+
+Telemetry signals are exported using the OTLP HTTP protocol:
+- **Base Endpoint**: `https://otel.example.com`
+- **Logs**: `https://otel.example.com/v1/logs`
+- **Traces**: `https://otel.example.com/v1/traces`
+- **Metrics**: `https://otel.example.com/v1/metrics`
+
+Configurable via environment variables (in `.env` / `env.dev`):
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: Base or signal OTLP URL
+- `OTEL_AUTH_TOKEN`: Bearer token for authentication to Alloy / OTel collector
+- `OTEL_EXPORTER_OTLP_HEADERS`: Explicit header override (e.g. `Authorization=Bearer <token>`)
+- `OTEL_SERVICE_NAME`: Service identifier (`medmatch-backend` / `medmatch-frontend`)
+- `VITE_OTEL_EXPORTER_OTLP_ENDPOINT`: Frontend endpoint
+- `VITE_OTEL_AUTH_TOKEN`: Frontend auth token
+
+### Backend Instrumentation (.NET 10)
+- **Logs**: OpenTelemetry logging provider (`builder.Logging.AddOpenTelemetry`) exporting structured logs with scopes, exceptions, and trace contexts to Loki via Alloy.
+- **Traces**: ASP.NET Core request tracing, outgoing HttpClient tracing, PostgreSQL queries via `Npgsql.OpenTelemetry`, and custom `ActivitySource` spans.
+- **Metrics**: ASP.NET Core HTTP metrics, .NET Runtime metrics (GC, memory, thread pool), and custom business counters:
+  - `medmatch.user.registrations.total`
+  - `medmatch.user.logins.total` (tagged with status: `success` / `failure`)
+  - `medmatch.reviews.created.total` (tagged with `target_type`)
+  - `medmatch.recommendations.moderated.total` (tagged with `status`)
+  - `medmatch.matches.computed.total`
+  - `medmatch.translations.requested.total` (tagged with `target_language`)
+  - `medmatch.match.computation.duration.ms` (Histogram)
+
+### Frontend Instrumentation (React / Vite)
+- **Tracing**: WebTracerProvider with W3C `traceparent` propagation on API fetch calls to correlate browser actions with backend traces.
+- **Logs**: Structured `logger` (`debug`, `info`, `warn`, `error`) batching OTLP logs to `/v1/logs`, plus global error handlers (`window.onerror`, `window.onunhandledrejection`) and React `<ErrorBoundary>`.
+- **Metrics**: Core Web Vitals (CLS, FCP, INP, LCP, TTFB) captured via `web-vitals` and exported as gauges to `/v1/metrics`.
+
 ## Testing And Verification
 
 Recommended local checks:

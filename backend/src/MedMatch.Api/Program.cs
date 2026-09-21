@@ -6,6 +6,7 @@ using MedMatch.Domain;
 using MedMatch.Infrastructure.Persistence;
 using MedMatch.Infrastructure.Services;
 using MedMatch.Api.Configuration;
+using MedMatch.Api.Observability;
 using MedMatch.Api.Services;
 using static MedMatch.Api.Mapping.DtoMapper;
 using static MedMatch.Api.Queries.ReviewQueries;
@@ -16,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddMedMatchObservability();
 var connectionString = $"Host={builder.Configuration.Required("DATABASE_HOST")};Port={builder.Configuration["DATABASE_PORT"] ?? "5432"};Database={builder.Configuration.Required("DATABASE_NAME")};Username={builder.Configuration.Required("DATABASE_USER")};Password={builder.Configuration.Required("DATABASE_PASSWORD")}";
 builder.Services.AddDbContext<MedMatchDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<PasswordHasher>();
@@ -41,6 +43,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Unhandled exception processing HTTP {Method} {Path}", context.Request.Method, context.Request.Path);
+        throw;
+    }
+});
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.UseCors();
 app.UseAuthentication();
@@ -64,17 +79,40 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 var api = app.MapGroup("/api");
 
-api.MapPost("/auth/register", async (RegisterRequest request, IAuthService auth, CancellationToken ct) =>
+api.MapPost("/auth/register", async (RegisterRequest request, IAuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
-    try { return Results.Accepted("/api/auth/login", await auth.RegisterAsync(request, ct)); }
+    try
+    {
+        var response = await auth.RegisterAsync(request, ct);
+        MedMatchMetrics.RecordRegistration();
+        logger.LogInformation("User registered successfully: {Email}", request.Email);
+        return Results.Accepted("/api/auth/login", response);
+    }
     catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
     catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); }
 }).AllowAnonymous();
 
-api.MapPost("/auth/login", async (LoginRequest request, IAuthService auth, CancellationToken ct) =>
+api.MapPost("/auth/login", async (LoginRequest request, IAuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
-    try { return (await auth.LoginAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized(); }
-    catch (InvalidOperationException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
+    try
+    {
+        var response = await auth.LoginAsync(request, ct);
+        var success = response is not null;
+        MedMatchMetrics.RecordLogin(success);
+        if (success)
+        {
+            logger.LogInformation("User logged in successfully: {Email}", request.Email);
+            return Results.Ok(response);
+        }
+        logger.LogWarning("Failed login attempt for email: {Email}", request.Email);
+        return Results.Unauthorized();
+    }
+    catch (InvalidOperationException)
+    {
+        MedMatchMetrics.RecordLogin(false);
+        logger.LogWarning("Forbidden login attempt for deactivated user: {Email}", request.Email);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
 }).AllowAnonymous();
 
 api.MapPost("/auth/refresh", async (RefreshRequest request, IAuthService auth, CancellationToken ct) =>
@@ -130,7 +168,7 @@ api.MapPut("/doctors/{id:guid}", async (Guid id, DoctorDto dto, MedMatchDbContex
 api.MapDelete("/doctors/{id:guid}", async (Guid id, MedMatchDbContext db, CancellationToken ct) => { var doctor = await db.Doctors.FindAsync([id], ct); if (doctor is null) return Results.NotFound(); db.Doctors.Remove(doctor); await db.SaveChangesAsync(ct); return Results.NoContent(); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Clinic,Doctor,Admin" });
 
 api.MapGet("/reviews", async (Guid? clinicId, Guid? doctorId, MedMatchDbContext db, CancellationToken ct) => { var reviews = await ReviewQuery(db, clinicId, doctorId).ToListAsync(ct); return Results.Ok(reviews.Select(ToReviewDto)); }).AllowAnonymous();
-api.MapPost("/reviews", async (UpsertReviewRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) => { if (request.Rating is < 1 or > 5 || (request.ClinicId is null && request.DoctorId is null)) return Results.BadRequest(new { error = "Rating must be 1–5 and a clinic or doctor is required." }); var review = new Review { AuthorUserId = UserId(principal) }; ApplyReview(review, request); db.Reviews.Add(review); await db.SaveChangesAsync(ct); var result = await ReviewQuery(db, null, null).SingleAsync(x => x.Id == review.Id, ct); return Results.Created($"/api/reviews/{review.Id}", ToReviewDto(result)); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
+api.MapPost("/reviews", async (UpsertReviewRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) => { if (request.Rating is < 1 or > 5 || (request.ClinicId is null && request.DoctorId is null)) return Results.BadRequest(new { error = "Rating must be 1–5 and a clinic or doctor is required." }); var review = new Review { AuthorUserId = UserId(principal) }; ApplyReview(review, request); db.Reviews.Add(review); await db.SaveChangesAsync(ct); MedMatchMetrics.RecordReviewCreated(request.ClinicId is not null); var result = await ReviewQuery(db, null, null).SingleAsync(x => x.Id == review.Id, ct); return Results.Created($"/api/reviews/{review.Id}", ToReviewDto(result)); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 api.MapPut("/reviews/{id:guid}", async (Guid id, UpsertReviewRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) => { var currentUserId = UserId(principal); var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == id && x.AuthorUserId == currentUserId, ct); if (review is null) return Results.NotFound(); if (request.Rating is < 1 or > 5) return Results.BadRequest(new { error = "Rating must be 1–5." }); ApplyReview(review, request); await db.SaveChangesAsync(ct); var result = await ReviewQuery(db, null, null).SingleAsync(x => x.Id == id, ct); return Results.Ok(ToReviewDto(result)); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 api.MapDelete("/reviews/{id:guid}", async (Guid id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) => { var currentUserId = UserId(principal); var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == id && x.AuthorUserId == currentUserId, ct); if (review is null) return Results.NotFound(); db.Reviews.Remove(review); await db.SaveChangesAsync(ct); return Results.NoContent(); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient,Admin" });
 
@@ -180,6 +218,7 @@ api.MapPost("/recommendations", async (CreateRecommendationRequest request, Clai
 
     db.Recommendations.Add(recommendation);
     await db.SaveChangesAsync(ct);
+    MedMatchMetrics.RecordRecommendation(recommendation.Status.ToString());
 
     var created = await LoadRecommendation(db, recommendation.Id, ct);
     return Results.Created($"/api/recommendations/{created!.Id}", ToRecommendationDto(created));
@@ -315,11 +354,16 @@ api.MapPost("/translate", async (TranslateRequest request, ITranslationService t
     var target = (request.TargetLanguage ?? "en").Trim().ToLowerInvariant();
     if (target is not ("en" or "es" or "de" or "it")) return Results.BadRequest(new { error = "Unsupported target language." });
     var translated = await translator.TranslateAsync(text, target, ct);
+    if (translated is not null)
+    {
+        MedMatchMetrics.RecordTranslation(target);
+    }
     return translated is null ? Results.StatusCode(StatusCodes.Status503ServiceUnavailable) : Results.Ok(new TranslateResponse(translated));
 }).AllowAnonymous();
 
 api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
 {
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     var currentUserId = UserId(principal);
     var current = await db.PatientProfiles
         .Include(x => x.User).ThenInclude(x => x.ConsentSettings)
@@ -367,7 +411,11 @@ api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal pri
             x.Score,
             x.Profile.Bio,
             x.Profile.Languages
-        ));
+        ))
+        .ToList();
+
+    sw.Stop();
+    MedMatchMetrics.RecordMatchesComputed(matches.Count, sw.Elapsed.TotalMilliseconds);
 
     return Results.Ok(matches);
 }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });

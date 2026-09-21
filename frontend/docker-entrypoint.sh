@@ -2,13 +2,21 @@
 set -e
 
 # Generate the runtime config from environment variables so that sensitive
-# values (e.g. the Google OAuth client id) are never baked into the image.
+# values (e.g. the Google OAuth client id, OTel auth token) are never baked into the image.
 GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-${VITE_OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.kevdevs.org}}"
+OTEL_AUTH_TOKEN="${OTEL_AUTH_TOKEN:-${VITE_OTEL_AUTH_TOKEN:-}}"
+OTEL_EXPORTER_OTLP_HEADERS="${OTEL_EXPORTER_OTLP_HEADERS:-${VITE_OTEL_EXPORTER_OTLP_HEADERS:-}}"
+OTEL_SERVICE_NAME="${OTEL_FRONTEND_SERVICE_NAME:-${OTEL_SERVICE_NAME:-${VITE_OTEL_SERVICE_NAME:-medmatch-frontend}}}"
 
 cat > /usr/share/nginx/html/config.js <<EOF
 window.__MEDMATCH_CONFIG__ = {
   GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}",
-  API_URL: ""
+  API_URL: "",
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT}",
+  OTEL_AUTH_TOKEN: "${OTEL_AUTH_TOKEN}",
+  OTEL_EXPORTER_OTLP_HEADERS: "${OTEL_EXPORTER_OTLP_HEADERS}",
+  OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME}"
 };
 EOF
 
