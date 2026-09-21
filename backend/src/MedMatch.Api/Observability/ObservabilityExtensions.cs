@@ -18,21 +18,16 @@ public static class ObservabilityExtensions
         var serviceName = configuration["OTEL_SERVICE_NAME"]
             ?? configuration["OTEL_BACKEND_SERVICE_NAME"]
             ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")
-            ?? Environment.GetEnvironmentVariable("OTEL_BACKEND_SERVICE_NAME")
-            ?? "medmatch-backend";
+            ?? Environment.GetEnvironmentVariable("OTEL_BACKEND_SERVICE_NAME");
 
         var serviceVersion = configuration["OTEL_SERVICE_VERSION"]
             ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION")
             ?? "1.0.0";
 
         var baseEndpointStr = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
-            ?? "https://otel.kevdevs.org";
+            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
-        // IMPORTANT: keep this as a plain string. Wrapping it in a Uri and
-        // interpolating it again re-adds a trailing "/", causing the
-        // double-slash bug (".../v1/logs" -> "..//v1/logs").
-        var baseTrimmed = baseEndpointStr.TrimEnd('/');
+        var baseTrimmed = baseEndpointStr.Trim().TrimEnd('/');
 
         var logsEndpointStr = configuration["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"]
             ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
@@ -46,29 +41,25 @@ public static class ObservabilityExtensions
             ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
             ?? $"{baseTrimmed}/v1/metrics";
 
-        var token = configuration["OTEL_AUTH_TOKEN"]
-            ?? configuration["OTEL_API_KEY"]
-            ?? Environment.GetEnvironmentVariable("OTEL_AUTH_TOKEN")
+        // --- TOKEN ---
+        var rawToken = Environment.GetEnvironmentVariable("OTEL_AUTH_TOKEN")
             ?? Environment.GetEnvironmentVariable("OTEL_API_KEY")
+            ?? configuration["OTEL_AUTH_TOKEN"]
+            ?? configuration["OTEL_API_KEY"]
             ?? string.Empty;
 
-        var headersStr = configuration["OTEL_EXPORTER_OTLP_HEADERS"]
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_HEADERS");
+        var token = rawToken.Trim().Trim('"').Trim('\'');
 
-        if (string.IsNullOrWhiteSpace(headersStr) && !string.IsNullOrWhiteSpace(token))
+        string? headersStr;
+        if (!string.IsNullOrWhiteSpace(token))
         {
             headersStr = $"Authorization=Bearer {token}";
         }
-
-        // Temporary diagnostics - remove once the 401 is confirmed fixed.
-        // Do NOT leave this enabled in production (it can leak the token).
-        if (builder.Environment.IsDevelopment())
+        else
         {
-            Console.WriteLine($"[OTEL DEBUG] base endpoint: '{baseTrimmed}'");
-            Console.WriteLine($"[OTEL DEBUG] logs endpoint: '{logsEndpointStr}'");
-            Console.WriteLine($"[OTEL DEBUG] traces endpoint: '{tracesEndpointStr}'");
-            Console.WriteLine($"[OTEL DEBUG] metrics endpoint: '{metricsEndpointStr}'");
-            Console.WriteLine($"[OTEL DEBUG] headers configured: {(!string.IsNullOrWhiteSpace(headersStr) ? "yes" : "NO - missing token/headers!")}");
+            var rawHeaders = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_HEADERS")
+                ?? configuration["OTEL_EXPORTER_OTLP_HEADERS"];
+            headersStr = string.IsNullOrWhiteSpace(rawHeaders) ? null : rawHeaders.Trim();
         }
 
         void ConfigureResource(ResourceBuilder r) =>
