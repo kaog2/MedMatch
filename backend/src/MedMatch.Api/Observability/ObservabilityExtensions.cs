@@ -15,46 +15,60 @@ public static class ObservabilityExtensions
         var configuration = builder.Configuration;
 
         // 1. Resolve configuration values with sensible defaults and environment fallbacks
-        var serviceName = configuration["OTEL_SERVICE_NAME"] 
+        var serviceName = configuration["OTEL_SERVICE_NAME"]
             ?? configuration["OTEL_BACKEND_SERVICE_NAME"]
-            ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") 
+            ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")
             ?? Environment.GetEnvironmentVariable("OTEL_BACKEND_SERVICE_NAME")
             ?? "medmatch-backend";
 
-        var serviceVersion = configuration["OTEL_SERVICE_VERSION"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION") 
+        var serviceVersion = configuration["OTEL_SERVICE_VERSION"]
+            ?? Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION")
             ?? "1.0.0";
 
-        var baseEndpointStr = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") 
+        var baseEndpointStr = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]
+            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
             ?? "https://otel.kevdevs.org";
 
-        var baseUri = new Uri(baseEndpointStr.TrimEnd('/'));
+        // IMPORTANT: keep this as a plain string. Wrapping it in a Uri and
+        // interpolating it again re-adds a trailing "/", causing the
+        // double-slash bug (".../v1/logs" -> "..//v1/logs").
+        var baseTrimmed = baseEndpointStr.TrimEnd('/');
 
-        var logsEndpointStr = configuration["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") 
-            ?? $"{baseUri}/v1/logs";
+        var logsEndpointStr = configuration["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"]
+            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+            ?? $"{baseTrimmed}/v1/logs";
 
-        var tracesEndpointStr = configuration["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") 
-            ?? $"{baseUri}/v1/traces";
+        var tracesEndpointStr = configuration["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]
+            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+            ?? $"{baseTrimmed}/v1/traces";
 
-        var metricsEndpointStr = configuration["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") 
-            ?? $"{baseUri}/v1/metrics";
+        var metricsEndpointStr = configuration["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"]
+            ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
+            ?? $"{baseTrimmed}/v1/metrics";
 
-        var token = configuration["OTEL_AUTH_TOKEN"] 
-            ?? configuration["OTEL_API_KEY"] 
-            ?? Environment.GetEnvironmentVariable("OTEL_AUTH_TOKEN") 
-            ?? Environment.GetEnvironmentVariable("OTEL_API_KEY") 
+        var token = configuration["OTEL_AUTH_TOKEN"]
+            ?? configuration["OTEL_API_KEY"]
+            ?? Environment.GetEnvironmentVariable("OTEL_AUTH_TOKEN")
+            ?? Environment.GetEnvironmentVariable("OTEL_API_KEY")
             ?? string.Empty;
 
-        var headersStr = configuration["OTEL_EXPORTER_OTLP_HEADERS"] 
+        var headersStr = configuration["OTEL_EXPORTER_OTLP_HEADERS"]
             ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_HEADERS");
 
         if (string.IsNullOrWhiteSpace(headersStr) && !string.IsNullOrWhiteSpace(token))
         {
             headersStr = $"Authorization=Bearer {token}";
+        }
+
+        // Temporary diagnostics - remove once the 401 is confirmed fixed.
+        // Do NOT leave this enabled in production (it can leak the token).
+        if (builder.Environment.IsDevelopment())
+        {
+            Console.WriteLine($"[OTEL DEBUG] base endpoint: '{baseTrimmed}'");
+            Console.WriteLine($"[OTEL DEBUG] logs endpoint: '{logsEndpointStr}'");
+            Console.WriteLine($"[OTEL DEBUG] traces endpoint: '{tracesEndpointStr}'");
+            Console.WriteLine($"[OTEL DEBUG] metrics endpoint: '{metricsEndpointStr}'");
+            Console.WriteLine($"[OTEL DEBUG] headers configured: {(!string.IsNullOrWhiteSpace(headersStr) ? "yes" : "NO - missing token/headers!")}");
         }
 
         void ConfigureResource(ResourceBuilder r) =>
@@ -151,4 +165,3 @@ public static class ObservabilityExtensions
         return builder;
     }
 }
-
