@@ -5,4 +5,8 @@
 window.__MEDMATCH_CONFIG__ = {
   GOOGLE_CLIENT_ID: "",
   API_URL: "",
+  OTEL_EXPORTER_OTLP_ENDPOINT: "",
+  OTEL_AUTH_TOKEN: "",
+  OTEL_EXPORTER_OTLP_HEADERS: "",
+  OTEL_SERVICE_NAME: "medmatch-frontend"
 };

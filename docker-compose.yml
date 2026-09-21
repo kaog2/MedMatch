@@ -83,6 +83,10 @@ services:
       LLM_MODERATION_MODEL: ${LLM_MODERATION_MODEL:-gpt-4o-mini}
       LLM_MODERATION_AUTO_APPROVE: ${LLM_MODERATION_AUTO_APPROVE:-true}
       LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.example.com}
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-medmatch-backend}
     ports:
       - "5000:8080"
     depends_on:
@@ -106,6 +110,12 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
       VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.example.com}
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      OTEL_SERVICE_NAME: ${VITE_OTEL_SERVICE_NAME:-medmatch-frontend}
+      VITE_OTEL_EXPORTER_OTLP_ENDPOINT: ${VITE_OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.example.com}
+      VITE_OTEL_AUTH_TOKEN: ${VITE_OTEL_AUTH_TOKEN:-}
       # If using Next.js instead of Vite, change to NEXT_PUBLIC_API_URL
     ports:
       - "3000:5173"

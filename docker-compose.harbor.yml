@@ -68,6 +68,10 @@ services:
       LLM_MODERATION_MODEL: ${LLM_MODERATION_MODEL:-gpt-4o-mini}
       LLM_MODERATION_AUTO_APPROVE: ${LLM_MODERATION_AUTO_APPROVE:-false}
       LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.example.com}
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-medmatch-backend}
     expose:
       - "8080"
     depends_on:
@@ -85,6 +89,10 @@ services:
       # Injected at runtime by docker-entrypoint.sh into /config.js.
       # Not baked into the image.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-https://otel.example.com}
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      OTEL_SERVICE_NAME: ${VITE_OTEL_SERVICE_NAME:-medmatch-frontend}
     expose:
       - "80"
     depends_on:

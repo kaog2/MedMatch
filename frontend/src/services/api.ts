@@ -1,5 +1,6 @@
 import { useAuthStore } from '../store';
 import i18n from '../i18n';
+import { logger } from './telemetry';
 
 const baseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_URL ?? 'http://localhost:5000';
 
@@ -11,7 +12,18 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     ...options,
     headers: { 'Content-Type': 'application/json', 'Accept-Language': resolvedLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
   });
-  if (!response.ok) throw new Error((await response.json().catch(() => ({ error: response.statusText }))).error ?? 'Request failed');
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ error: response.statusText }));
+    const errorMsg = errorBody.error ?? 'Request failed';
+    logger.warn(`API Error [${options.method || 'GET'}] ${path} returned ${response.status}`, {
+      path,
+      method: options.method || 'GET',
+      status: response.status,
+      statusText: response.statusText,
+      errorMessage: errorMsg,
+    });
+    throw new Error(errorMsg);
+  }
   return response.status === 204 ? (undefined as T) : response.json();
 }
 
