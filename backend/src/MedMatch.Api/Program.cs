@@ -538,8 +538,17 @@ api.MapGet("/admin/users/{id:guid}/matches", async (Guid id, MedMatchDbContext d
 
 api.MapPost("/admin/users/{id:guid}/active", async (Guid id, UpdateActiveRequest request, MedMatchDbContext db, CancellationToken ct) =>
 {
-    var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, ct);
+    var user = await db.Users.Include(x => x.Roles).SingleOrDefaultAsync(x => x.Id == id, ct);
     if (user is null) return Results.NotFound();
+
+    if (!request.IsActive && user.IsActive && user.Roles.Any(x => x.Role == UserRole.Admin))
+    {
+        var activeAdminCount = await db.Users
+            .CountAsync(x => x.IsActive && x.Roles.Any(role => role.Role == UserRole.Admin), ct);
+        if (activeAdminCount <= 1)
+            return Results.BadRequest(new { error = "At least one active administrator must remain." });
+    }
+
     user.IsActive = request.IsActive;
     await db.SaveChangesAsync(ct);
     return Results.Ok(new { id = user.Id, isActive = user.IsActive });
@@ -681,7 +690,7 @@ diaryApi.MapPost("/sheets/{date}/entries", async (DateOnly date, UpsertSymptomEn
         SheetId = sheet.Id,
         UserId = userId,
         Date = date,
-        RecordedAt = request.RecordedAt ?? DateTimeOffset.UtcNow,
+        RecordedAt = (request.RecordedAt ?? DateTimeOffset.UtcNow).ToUniversalTime(),
         Category = ParseSymptomCategory(request.Category),
         SymptomName = request.SymptomName.Trim(),
         PainType = request.PainType?.Trim(),
@@ -711,7 +720,7 @@ diaryApi.MapPut("/entries/{id:guid}", async (Guid id, UpsertSymptomEntryRequest 
     var entry = await db.SymptomDiaryEntries.Include(x => x.Sheet).SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
     if (entry is null) return Results.NotFound();
 
-    entry.RecordedAt = request.RecordedAt ?? entry.RecordedAt;
+    entry.RecordedAt = request.RecordedAt?.ToUniversalTime() ?? entry.RecordedAt.ToUniversalTime();
     entry.Category = ParseSymptomCategory(request.Category);
     entry.SymptomName = request.SymptomName.Trim();
     entry.PainType = request.PainType?.Trim();
@@ -887,7 +896,7 @@ botApi.MapPost("/symptom-entries", async (BotLogSymptomRequest request, HttpCont
         SheetId = sheet.Id,
         UserId = user.Id,
         Date = date,
-        RecordedAt = request.RecordedAt ?? DateTimeOffset.UtcNow,
+        RecordedAt = (request.RecordedAt ?? DateTimeOffset.UtcNow).ToUniversalTime(),
         Category = ParseSymptomCategory(request.Category),
         SymptomName = request.SymptomName.Trim(),
         PainType = request.PainType?.Trim(),

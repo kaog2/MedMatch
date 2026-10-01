@@ -56,6 +56,7 @@ export default function AdminPortal() {
       client.invalidateQueries({ queryKey: ['admin-users'] });
       setNotice(t('admin.userStatusUpdated'));
     },
+    onError: (e) => setErrorNotice(e instanceof Error ? e.message : t('admin.rolesError')),
   });
 
   const recommendations = useQuery({
@@ -187,7 +188,6 @@ export default function AdminPortal() {
                       <Switch
                         size="small"
                         checked={user.isActive}
-                        disabled={user.roles.includes('Admin')}
                         onChange={(e) => toggleActive.mutate({ id: user.id, isActive: e.target.checked })}
                       />
                     </TableCell>
