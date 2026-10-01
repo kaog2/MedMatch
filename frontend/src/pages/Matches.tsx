@@ -195,7 +195,7 @@ export default function Matches() {
                     {match.sameLocation && (
                       <Box>
                         <Chip
-                          label="{t('matches.localMatch')}"
+                          label={t('matches.localMatch')}
                           size="small"
                           sx={(theme) => ({
                             bgcolor: theme.palette.mode === 'dark' ? 'rgba(77,182,172,.18)' : 'rgba(0,105,92,.08)',

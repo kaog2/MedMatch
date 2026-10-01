@@ -118,6 +118,8 @@
     "specialty": "Especialidad o terapia",
     "specialtyPlaceholder": "p. ej. ortopedia",
     "cityPlaceholder": "p. ej. Madrid",
+    "allCities": "Todas las ciudades",
+    "allCountries": "Todos los países",
     "treatment": "Tratamiento o experiencia",
     "treatmentPlaceholder": "p. ej. terapia del dolor",
     "search": "Buscar atención",

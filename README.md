@@ -147,6 +147,16 @@ Extracted tags join the same `diagnosis_tags` vocabulary, so they feed the Dice-
 
 - **Docker** + **Docker Compose** for local development.
 - **Nginx** as reverse proxy.
+- **LibreTranslate** as the self-hosted translation service for user-created tags.
+
+### Localization and user-created tags
+
+The interface is localized in English, German, Spanish, and Italian. Static labels are translated by the frontend locale files. User-created health tags are translated on demand for display in the active language through the self-hosted LibreTranslate service.
+
+- Diagnosis tags on the patient profile and symptom, pain-type, and body-location tags in the diary are translated automatically when a non-English language is selected.
+- The original, canonical value remains the value saved in PostgreSQL. Translation never changes matching, search, analytics, or the author-owned data.
+- Results are cached in the `translation_cache` table. A newly saved custom tag is translated the first time it is displayed in a supported target language; if the translation service is unavailable, MedMatch safely shows the original value.
+- The backend reads the service address from `LIBRETRANSLATE_URL`; no external translation API key is required.
 
 ---
 
@@ -297,6 +307,7 @@ This starts:
 - ASP.NET Core backend
 - React frontend (Vite)
 - Nginx reverse proxy
+- LibreTranslate (self-hosted machine translation)
 
 4. Access the application:
 
@@ -317,13 +328,14 @@ Never commit real credentials or secrets. Use placeholders and private environme
 Fictional data can be inserted on startup through environment flags:
 
 ```env
+SEED_SAMPLE_PROVIDERS=true # 100 clearly labeled demo care providers
 SEED_SAMPLE_DATA=true   # 100 general sample patients
 SEED_CASE_DATA=true     # 50 Morbus Perthes / LWS / hip replacement patients
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-me
 ```
 
-The seeders are idempotent (they skip when the sample users already exist) and create a configured administrator account for the admin portal.
+The seeders are idempotent. Provider examples are named `DEMO ONLY - MedMatch Sample Provider ...`, have no contact details or website, and are unverified. Their publication flag is enabled only so they appear in local directory testing; they are fictional fixtures, not real organizations or evidence of real-world consent. Compose defaults all sample flags to `false`; `env.dev` enables these local examples.
 
 For architecture, API routes, database details, testing, and deployment notes, see [TECHNICAL_README.md](TECHNICAL_README.md).
 

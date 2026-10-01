@@ -70,6 +70,8 @@ using (var scope = app.Services.CreateScope())
     await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
     await DiagnosisTagLocalization.SeedAsync(db, CancellationToken.None);
     await AdminSeeder.SeedAsync(db, passwords, builder.Configuration, CancellationToken.None);
+    if (CareProviderSampleDataSeeder.IsEnabled(builder.Configuration))
+        await CareProviderSampleDataSeeder.SeedAsync(db, CancellationToken.None);
     if (SampleDataSeeder.IsEnabled(builder.Configuration))
         await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
     if (CaseStudySeeder.IsEnabled(builder.Configuration))
@@ -154,9 +156,9 @@ api.MapPut("/consent", async (ConsentSettingsDto dto, HttpContext context, Claim
     await db.SaveChangesAsync(ct); await DiagnosisMatching.ComputeMatchesAsync(userId, db, ct); return Results.Ok(ToConsentDto(settings));
 }).RequireAuthorization();
 
-api.MapGet("/clinics", async (string? specialty, string? city, string? tag, MedMatchDbContext db, CancellationToken ct) =>
+api.MapGet("/clinics", async (string? specialty, string? city, string? country, string? tag, MedMatchDbContext db, CancellationToken ct) =>
 {
-    var clinics = await db.Clinics.AsNoTracking().Where(x => x.PublicationConsentGranted).ToListAsync(ct); var filtered = clinics.Where(x => string.IsNullOrWhiteSpace(specialty) || x.Specialty.Contains(specialty, StringComparison.OrdinalIgnoreCase)).Where(x => string.IsNullOrWhiteSpace(city) || x.City.Contains(city, StringComparison.OrdinalIgnoreCase)).Where(x => string.IsNullOrWhiteSpace(tag) || x.TreatmentsOffered.Any(t => t.Contains(tag, StringComparison.OrdinalIgnoreCase))).Select(ToClinicDto); return Results.Ok(filtered);
+    var clinics = await db.Clinics.AsNoTracking().Where(x => x.PublicationConsentGranted).ToListAsync(ct); var filtered = clinics.Where(x => string.IsNullOrWhiteSpace(specialty) || x.Specialty.Contains(specialty, StringComparison.OrdinalIgnoreCase)).Where(x => string.IsNullOrWhiteSpace(city) || x.City.Contains(city, StringComparison.OrdinalIgnoreCase)).Where(x => string.IsNullOrWhiteSpace(country) || x.Country.Contains(country, StringComparison.OrdinalIgnoreCase)).Where(x => string.IsNullOrWhiteSpace(tag) || x.TreatmentsOffered.Any(t => t.Contains(tag, StringComparison.OrdinalIgnoreCase))).Select(ToClinicDto); return Results.Ok(filtered);
 }).AllowAnonymous();
 api.MapGet("/clinics/{id:guid}", async (Guid id, MedMatchDbContext db, CancellationToken ct) => { var clinic = await db.Clinics.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.PublicationConsentGranted, ct); return clinic is null ? Results.NotFound() : Results.Ok(ToClinicDto(clinic)); }).AllowAnonymous();
 api.MapPost("/clinics", async (ClinicDto dto, MedMatchDbContext db, CancellationToken ct) => { var clinic = new Clinic(); ApplyClinic(clinic, dto); db.Clinics.Add(clinic); await db.SaveChangesAsync(ct); return Results.Created($"/api/clinics/{clinic.Id}", ToClinicDto(clinic)); }).RequireAuthorization(new AuthorizeAttribute { Roles = "Clinic,Admin" });
@@ -360,6 +362,32 @@ api.MapPost("/translate", async (TranslateRequest request, ITranslationService t
         MedMatchMetrics.RecordTranslation(target);
     }
     return translated is null ? Results.StatusCode(StatusCodes.Status503ServiceUnavailable) : Results.Ok(new TranslateResponse(translated));
+}).AllowAnonymous();
+
+api.MapPost("/translate/batch", async (TranslateBatchRequest request, ITranslationService translator, CancellationToken ct) =>
+{
+    var texts = request.Texts?
+        .Select(text => text?.Trim())
+        .Where(text => !string.IsNullOrWhiteSpace(text))
+        .Select(text => text!)
+        .Distinct(StringComparer.Ordinal)
+        .ToArray() ?? [];
+
+    if (texts.Length == 0) return Results.BadRequest(new { error = "At least one text value is required." });
+    if (texts.Length > 50) return Results.BadRequest(new { error = "A maximum of 50 text values can be translated at once." });
+    if (texts.Any(text => text.Length > 2000)) return Results.BadRequest(new { error = "Each text value must be 2,000 characters or fewer." });
+
+    var target = (request.TargetLanguage ?? "en").Trim().ToLowerInvariant();
+    if (target is not ("en" or "es" or "de" or "it")) return Results.BadRequest(new { error = "Unsupported target language." });
+
+    var translations = await translator.TranslateManyAsync(texts, target, ct);
+    MedMatchMetrics.RecordTranslation(target);
+    var response = new List<TranslateBatchItem>(texts.Length);
+    foreach (var text in texts)
+    {
+        response.Add(new TranslateBatchItem(text, translations.TryGetValue(text, out var translated) ? translated : null));
+    }
+    return Results.Ok(new TranslateBatchResponse(response));
 }).AllowAnonymous();
 
 api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>

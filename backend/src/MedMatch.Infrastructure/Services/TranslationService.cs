@@ -50,6 +50,25 @@ public sealed class TranslationService(MedMatchDbContext db, HttpClient http, IC
         return translated;
     }
 
+    public async Task<IReadOnlyDictionary<string, string>> TranslateManyAsync(IEnumerable<string> texts, string targetLanguage, CancellationToken ct)
+    {
+        var uniqueTexts = texts
+            .Select(text => text?.Trim())
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .Select(text => text!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var results = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var text in uniqueTexts)
+        {
+            var translated = await TranslateAsync(text, targetLanguage, ct);
+            if (!string.IsNullOrWhiteSpace(translated)) results[text] = translated;
+        }
+
+        return results;
+    }
+
     private static string Hash(string text)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));

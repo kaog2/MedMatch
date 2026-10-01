@@ -118,6 +118,8 @@
     "specialty": "Specialità o terapia",
     "specialtyPlaceholder": "es. ortopedia",
     "cityPlaceholder": "es. Roma",
+    "allCities": "Tutte le città",
+    "allCountries": "Tutti i paesi",
     "treatment": "Trattamento o esperienza",
     "treatmentPlaceholder": "es. terapia del dolore",
     "search": "Cerca cure",
