@@ -154,3 +154,20 @@ export async function translateText(text: string, targetLanguage: string): Promi
   });
   return result.translatedText;
 }
+
+export async function translateTexts(texts: string[], targetLanguage: string): Promise<Record<string, string>> {
+  const unique = [...new Set(texts.map((text) => text.trim()).filter(Boolean))];
+  const translated: Record<string, string> = {};
+
+  for (let index = 0; index < unique.length; index += 50) {
+    const result = await api<{ translations: { sourceText: string; translatedText: string | null }[] }>('/translate/batch', {
+      method: 'POST',
+      body: JSON.stringify({ texts: unique.slice(index, index + 50), targetLanguage }),
+    });
+    result.translations.forEach(({ sourceText, translatedText }) => {
+      if (translatedText) translated[sourceText] = translatedText;
+    });
+  }
+
+  return translated;
+}

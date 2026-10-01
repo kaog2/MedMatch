@@ -32,6 +32,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorState, Loading } from '../components/PageState';
+import { useTranslatedTags } from '../hooks/useTranslatedTags';
 import {
   addDiaryEntry,
   createBotApiKey,
@@ -130,6 +131,10 @@ function formatTime(isoDateTime: string): string {
   } catch {
     return '';
   }
+}
+
+function splitTags(value: string | null | undefined): string[] {
+  return value?.split(',').map((tag) => tag.trim()).filter(Boolean) ?? [];
 }
 
 // Custom icons
@@ -264,6 +269,20 @@ export default function SymptomDiary() {
     queryFn: () => getBotApiKey(),
     enabled: currentTab === 'bot',
   });
+
+  const diaryTags = useMemo(() => [
+    ...PAIN_TYPE_SUGGESTIONS,
+    ...BODY_LOCATION_SUGGESTIONS,
+    ...(sheetQuery.data?.entries ?? []).flatMap((entry) => [
+      entry.symptomName,
+      ...splitTags(entry.painType),
+      ...splitTags(entry.bodyLocation),
+    ]),
+    ...(analyticsQuery.data?.topSymptoms.map((item) => item.name) ?? []),
+    ...(analyticsQuery.data?.topLocations.map((item) => item.location) ?? []),
+    ...(analyticsQuery.data?.topPainTypes.map((item) => item.painType) ?? []),
+  ], [analyticsQuery.data, sheetQuery.data]);
+  const { translateTag } = useTranslatedTags(diaryTags);
 
   // Sync sheet form when sheetQuery resolves
   useEffect(() => {
@@ -740,7 +759,7 @@ export default function SymptomDiary() {
                             <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
                               <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
                                 <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                                  {entry.symptomName}
+                                  {translateTag(entry.symptomName)}
                                 </Typography>
                                 <Chip
                                   label={t(`diary.categories.${entry.category}`, entry.category)}
@@ -800,12 +819,12 @@ export default function SymptomDiary() {
                             <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 0.5 }}>
                               {entry.painType && (
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                  <strong>{t('diary.dialog.painTypes')}:</strong> {entry.painType}
+                                  <strong>{t('diary.dialog.painTypes')}:</strong> {splitTags(entry.painType).map(translateTag).join(', ')}
                                 </Typography>
                               )}
                               {entry.bodyLocation && (
                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                  <strong>{t('diary.dialog.location')}:</strong> {entry.bodyLocation}
+                                  <strong>{t('diary.dialog.location')}:</strong> {splitTags(entry.bodyLocation).map(translateTag).join(', ')}
                                 </Typography>
                               )}
                               {entry.durationMinutes && (
@@ -987,7 +1006,7 @@ export default function SymptomDiary() {
                           <Stack key={idx} direction="row" alignItems="center" justifyContent="space-between">
                             <Box>
                               <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                {sym.name}
+                                {translateTag(sym.name)}
                               </Typography>
                               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                                 Avg sev: {sym.averageSeverity.toFixed(1)}/10
@@ -1013,7 +1032,7 @@ export default function SymptomDiary() {
                           {analytics.topLocations.map((loc, idx) => (
                             <Stack key={idx} direction="row" alignItems="center" justifyContent="space-between">
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {loc.location}
+                                {translateTag(loc.location)}
                               </Typography>
                               <Chip size="small" label={`${loc.count}x`} sx={{ fontWeight: 700 }} />
                             </Stack>
@@ -1036,7 +1055,7 @@ export default function SymptomDiary() {
                           {analytics.topPainTypes.map((pt, idx) => (
                             <Stack key={idx} direction="row" alignItems="center" justifyContent="space-between">
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {pt.painType}
+                                {translateTag(pt.painType)}
                               </Typography>
                               <Chip size="small" label={`${pt.count}x`} sx={{ fontWeight: 700 }} />
                             </Stack>
@@ -1333,7 +1352,7 @@ export default function SymptomDiary() {
                     return (
                       <Chip
                         key={type}
-                        label={type}
+                        label={translateTag(type)}
                         clickable
                         onClick={() => togglePainType(type)}
                         color={isSelected ? 'primary' : 'default'}
@@ -1365,7 +1384,7 @@ export default function SymptomDiary() {
                     return (
                       <Chip
                         key={loc}
-                        label={loc}
+                        label={translateTag(loc)}
                         clickable
                         onClick={() => toggleLocation(loc)}
                         color={isSelected ? 'primary' : 'default'}
@@ -1517,4 +1536,3 @@ export default function SymptomDiary() {
     </Container>
   );
 }
-

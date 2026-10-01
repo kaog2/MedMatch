@@ -13,11 +13,12 @@ import {
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Consent, DiagnosisTag, Profile } from '../services/api';
 import { ErrorState, Loading } from '../components/PageState';
 import { useTranslation } from 'react-i18next';
+import { useTranslatedTags } from '../hooks/useTranslatedTags';
 
 const empty: Profile = { displayMode: 'Anonymous', diagnoses: [], interventions: [], symptoms: '', languages: [] };
 
@@ -38,8 +39,14 @@ export default function PatientProfile() {
       ),
   });
 
+  const translatableTags = useMemo(
+    () => [...form.diagnoses, ...(suggestions.data?.map((tag) => tag.name) ?? [])],
+    [form.diagnoses, suggestions.data],
+  );
+  const { translateTag } = useTranslatedTags(translatableTags);
+
   const displayTag = (name: string) =>
-    suggestions.data?.find((t) => t.name.toLowerCase() === name.toLowerCase())?.localizedName ?? name;
+    suggestions.data?.find((t) => t.name.toLowerCase() === name.toLowerCase())?.localizedName ?? translateTag(name);
 
   useEffect(() => { if (profile.data) setForm(profile.data); }, [profile.data]);
   useEffect(() => { if (consent.data) setPrivacy(consent.data); }, [consent.data]);
