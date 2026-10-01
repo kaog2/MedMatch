@@ -262,6 +262,10 @@ The main PostgreSQL tables are:
 
 PostgreSQL array columns are used for diagnoses, interventions, symptoms, languages, treatments, and review tags. Entity configuration is in `backend/src/MedMatch.Infrastructure/Persistence/Configurations/EntityConfigurations.cs`.
 
+### Local care-provider fixtures
+
+`CareProviderSampleDataSeeder` can add 100 deterministic fictional records to the `clinics` table. Set `SEED_SAMPLE_PROVIDERS=true` to enable it; both Compose files default this flag to `false`, while `env.dev` enables it for local testing. The names carry a `DEMO ONLY` prefix, records are unverified, and contact/address/website fields are empty. The synthetic publication flag is enabled only so the anonymous directory endpoint can display the fixtures; it must not be interpreted as consent for any real provider. Seeding is idempotent and fills missing sample entries on later startups.
+
 ## Translation
 
 MedMatch uses the Compose-managed LibreTranslate service, not a third-party translation API, for on-demand tag translation. The API calls LibreTranslate with `source: auto` and caches a result by source text and target language in `translation_cache`.

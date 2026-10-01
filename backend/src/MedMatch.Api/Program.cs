@@ -70,6 +70,8 @@ using (var scope = app.Services.CreateScope())
     await DiagnosisMatching.SeedDiagnosisTagsAsync(db, CancellationToken.None);
     await DiagnosisTagLocalization.SeedAsync(db, CancellationToken.None);
     await AdminSeeder.SeedAsync(db, passwords, builder.Configuration, CancellationToken.None);
+    if (CareProviderSampleDataSeeder.IsEnabled(builder.Configuration))
+        await CareProviderSampleDataSeeder.SeedAsync(db, CancellationToken.None);
     if (SampleDataSeeder.IsEnabled(builder.Configuration))
         await SampleDataSeeder.SeedAsync(db, passwords, CancellationToken.None);
     if (CaseStudySeeder.IsEnabled(builder.Configuration))

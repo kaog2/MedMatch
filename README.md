@@ -328,13 +328,14 @@ Never commit real credentials or secrets. Use placeholders and private environme
 Fictional data can be inserted on startup through environment flags:
 
 ```env
+SEED_SAMPLE_PROVIDERS=true # 100 clearly labeled demo care providers
 SEED_SAMPLE_DATA=true   # 100 general sample patients
 SEED_CASE_DATA=true     # 50 Morbus Perthes / LWS / hip replacement patients
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-me
 ```
 
-The seeders are idempotent (they skip when the sample users already exist) and create a configured administrator account for the admin portal.
+The seeders are idempotent. Provider examples are named `DEMO ONLY - MedMatch Sample Provider ...`, have no contact details or website, and are unverified. Their publication flag is enabled only so they appear in local directory testing; they are fictional fixtures, not real organizations or evidence of real-world consent. Compose defaults all sample flags to `false`; `env.dev` enables these local examples.
 
 For architecture, API routes, database details, testing, and deployment notes, see [TECHNICAL_README.md](TECHNICAL_README.md).
 
