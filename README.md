@@ -147,6 +147,16 @@ Extracted tags join the same `diagnosis_tags` vocabulary, so they feed the Dice-
 
 - **Docker** + **Docker Compose** for local development.
 - **Nginx** as reverse proxy.
+- **LibreTranslate** as the self-hosted translation service for user-created tags.
+
+### Localization and user-created tags
+
+The interface is localized in English, German, Spanish, and Italian. Static labels are translated by the frontend locale files. User-created health tags are translated on demand for display in the active language through the self-hosted LibreTranslate service.
+
+- Diagnosis tags on the patient profile and symptom, pain-type, and body-location tags in the diary are translated automatically when a non-English language is selected.
+- The original, canonical value remains the value saved in PostgreSQL. Translation never changes matching, search, analytics, or the author-owned data.
+- Results are cached in the `translation_cache` table. A newly saved custom tag is translated the first time it is displayed in a supported target language; if the translation service is unavailable, MedMatch safely shows the original value.
+- The backend reads the service address from `LIBRETRANSLATE_URL`; no external translation API key is required.
 
 ---
 
@@ -297,6 +307,7 @@ This starts:
 - ASP.NET Core backend
 - React frontend (Vite)
 - Nginx reverse proxy
+- LibreTranslate (self-hosted machine translation)
 
 4. Access the application:
 

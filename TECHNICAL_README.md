@@ -4,7 +4,7 @@ This document describes the current implementation of MedMatch. For the product 
 
 ## Architecture
 
-MedMatch is a Docker Compose application with four services:
+MedMatch is a Docker Compose application with five services:
 
 ```text
 Browser
@@ -15,8 +15,9 @@ Nginx :80
   |
   `---------------------> Backend / ASP.NET Core :8080
                                   |
-                                  v
-                            PostgreSQL :5432
+                   +--------------+--------------+
+                   v                             v
+             PostgreSQL :5432         LibreTranslate :5000
 ```
 
 ### Components
@@ -29,6 +30,7 @@ Nginx :80
 | Application | `backend/src/MedMatch.Application/` | Request/response contracts and application interfaces |
 | Infrastructure | `backend/src/MedMatch.Infrastructure/` | EF Core DbContext, PostgreSQL mappings, migrations, token service |
 | Reverse proxy | `infra/nginx/nginx.conf` | Routes `/` to the frontend and `/api` plus `/health` to the API |
+| Machine translation | `libretranslate` Compose service | Self-hosted translations for user-created display tags; configured with `LIBRETRANSLATE_URL` |
 
 ## Local Development
 
@@ -70,6 +72,7 @@ URLs:
 - API: `http://localhost:5000`
 - API health: `http://localhost:5000/health`
 - PostgreSQL: `localhost:5432`
+- LibreTranslate API (local diagnostics): `http://localhost:5001`
 
 The Compose file currently uses development values for database credentials and JWT configuration. Do not use these values outside local development. In a deployed environment, provide secrets through the platform's secret store or environment configuration.
 
@@ -110,18 +113,21 @@ MedMatch.Application/
     ClinicContracts.cs                # Clinic and doctor records
     ReviewContracts.cs                # Review records
     PeopleContracts.cs                # Patient directory records
+    TranslationContracts.cs            # Single and batch translation records
     IAuthService.cs                    # Authentication service contract
     ITokenService.cs                   # Token service contract
     IPatientProfileService.cs          # Profile service contract
     IClinicSearchService.cs            # Clinic search contract
     IReviewService.cs                  # Review service contract
     IConsentService.cs                 # Consent service contract
+    ITranslationService.cs             # Translation service contract
 
 MedMatch.Infrastructure/
   Services/
     AuthService.cs                    # IAuthService implementation
     TokenService.cs                   # ITokenService implementation
     PasswordHasher.cs                 # PBKDF2 password hashing
+    TranslationService.cs              # LibreTranslate client and PostgreSQL cache
   Persistence/                        # EF Core context, mappings, migrations
 
 MedMatch.Api/
@@ -168,6 +174,7 @@ The backend requires these settings:
 | `JWT_ISSUER` | JWT issuer claim |
 | `JWT_AUDIENCE` | JWT audience claim |
 | `FRONTEND_URL` | Exact browser origin allowed by CORS, `http://localhost` through Nginx |
+| `LIBRETRANSLATE_URL` | Internal self-hosted LibreTranslate URL, normally `http://libretranslate:5000` in Compose |
 | `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID used to validate Google ID tokens |
 | `SMTP_HOST` | Mailcow SMTP hostname, for example `mail.example.com` |
 | `SMTP_PORT` | SMTP submission port, normally `587` with STARTTLS |
@@ -251,8 +258,15 @@ The main PostgreSQL tables are:
 - `reviews`: patient experiences and contact preferences
 - `messages`: connection requests and future conversations
 - `refresh_tokens`: hashed refresh tokens and revocation state
+- `translation_cache`: cached source-text/target-language translations returned by LibreTranslate
 
 PostgreSQL array columns are used for diagnoses, interventions, symptoms, languages, treatments, and review tags. Entity configuration is in `backend/src/MedMatch.Infrastructure/Persistence/Configurations/EntityConfigurations.cs`.
+
+## Translation
+
+MedMatch uses the Compose-managed LibreTranslate service, not a third-party translation API, for on-demand tag translation. The API calls LibreTranslate with `source: auto` and caches a result by source text and target language in `translation_cache`.
+
+The frontend calls `POST /api/translate/batch` for up to 50 display strings at a time and uses the result only for rendering. It never writes translated strings back to a patient profile or diary entry. This preserves the canonical stored tag for filtering, matching, and analytics, while letting custom tags appear in the selected UI language. The configured image loads `en`, `es`, `de`, and `it`; unsupported languages and translation failures fall back to the original value.
 
 ## Authentication And Authorization
 
