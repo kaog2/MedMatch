@@ -864,9 +864,9 @@ diaryApi.MapDelete("/bot-key/{id:guid}", async (Guid id, ClaimsPrincipal princip
 // --- Bot Ingestion Endpoints (n8n / Chatbot API) ---
 var botApi = api.MapGroup("/bot").AllowAnonymous();
 
-botApi.MapPost("/symptom-entries", async (BotLogSymptomRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+botApi.MapPost("/symptom-entries", async (BotLogSymptomRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
-    var user = await ResolveBotOrUserAsync(context, principal, db, ct);
+    var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
     if (user is null)
         return Results.Unauthorized();
 
@@ -908,9 +908,9 @@ botApi.MapPost("/symptom-entries", async (BotLogSymptomRequest request, HttpCont
     return Results.Created($"/api/symptom-diary/entries/{entry.Id}", ToSymptomDiaryEntryDto(entry));
 });
 
-botApi.MapGet("/symptom-entries/today", async (HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+botApi.MapGet("/symptom-entries/today", async (HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
-    var user = await ResolveBotOrUserAsync(context, principal, db, ct);
+    var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
     if (user is null)
         return Results.Unauthorized();
 
@@ -941,9 +941,9 @@ botApi.MapGet("/symptom-entries/today", async (HttpContext context, ClaimsPrinci
     return Results.Ok(ToSymptomDiarySheetDto(sheet));
 });
 
-botApi.MapPost("/symptom-entries/quick-text", async (BotQuickLogTextRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
+botApi.MapPost("/symptom-entries/quick-text", async (BotQuickLogTextRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
 {
-    var user = await ResolveBotOrUserAsync(context, principal, db, ct);
+    var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
     if (user is null)
         return Results.Unauthorized();
 
@@ -983,9 +983,9 @@ botApi.MapPost("/symptom-entries/quick-text", async (BotQuickLogTextRequest requ
 
 app.Run();
 
-static async Task<User?> ResolveBotOrUserAsync(HttpContext httpContext, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct)
+static async Task<User?> ResolveBotOrUserAsync(HttpContext httpContext, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct)
 {
-    var botUser = await BotApiKeyAuth.AuthenticateBotKeyAsync(httpContext, db, ct);
+    var botUser = await BotApiKeyAuth.AuthenticateBotKeyAsync(httpContext, db, logger, ct);
     if (botUser is not null) return botUser;
 
     if (principal.Identity?.IsAuthenticated == true)
@@ -993,6 +993,12 @@ static async Task<User?> ResolveBotOrUserAsync(HttpContext httpContext, ClaimsPr
         var id = UserId(principal);
         return await db.Users.FindAsync([id], ct);
     }
+
+    logger.LogWarning(
+        "Unauthorized bot API request. No valid bot key or authenticated user was found. Path: {RequestPath}; X-API-Key header present: {HasApiKeyHeader}; Authorization header present: {HasAuthorizationHeader}",
+        httpContext.Request.Path,
+        httpContext.Request.Headers.ContainsKey("X-API-Key"),
+        httpContext.Request.Headers.ContainsKey("Authorization"));
     return null;
 }
 

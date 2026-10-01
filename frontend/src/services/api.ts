@@ -6,12 +6,72 @@ const baseUrl = (import.meta as unknown as { env?: Record<string, string> }).env
 
 const resolvedLanguage = () => (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 
+type AuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  roles: ('Patient' | 'Clinic' | 'Doctor' | 'Admin')[];
+};
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (!refreshToken) return null;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      useAuthStore.getState().signOut();
+      return null;
+    }
+
+    const session = await response.json() as AuthResponse;
+    useAuthStore.getState().setSession(session.accessToken, session.refreshToken, session.roles);
+    return session.accessToken;
+  } catch (error) {
+    logger.warn('API access-token refresh request failed', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown refresh error',
+    });
+    return null;
+  }
+}
+
+function getRefreshedAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshAccessToken().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function sendApiRequest(path: string, options: RequestInit, token: string | null): Promise<Response> {
+  const headers = new Headers(options.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Accept-Language', resolvedLanguage());
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  return fetch(`${baseUrl}/api${path}`, { ...options, headers });
+}
+
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = useAuthStore.getState().accessToken;
-  const response = await fetch(`${baseUrl}/api${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', 'Accept-Language': resolvedLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
-  });
+  const sentToken = useAuthStore.getState().accessToken;
+  let response = await sendApiRequest(path, options, sentToken);
+
+  if (response.status === 401 && !path.startsWith('/auth/')) {
+    const currentToken = useAuthStore.getState().accessToken;
+    const retryToken = currentToken && currentToken !== sentToken
+      ? currentToken
+      : await getRefreshedAccessToken();
+
+    if (retryToken) response = await sendApiRequest(path, options, retryToken);
+  }
+
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ error: response.statusText }));
     const errorMsg = errorBody.error ?? 'Request failed';
