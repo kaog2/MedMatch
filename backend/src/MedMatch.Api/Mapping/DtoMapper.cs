@@ -65,4 +65,81 @@ public static class DtoMapper
             .ToArray();
         return new(recommendation.Id, recommendation.AuthorUserId, authorName, clinics, diagnoses, recommendation.Details, recommendation.Status, recommendation.ModerationNote, recommendation.CreatedAt);
     }
+
+    public static SymptomCategory ParseSymptomCategory(string? category)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return SymptomCategory.Pain;
+        if (Enum.TryParse<SymptomCategory>(category, true, out var result)) return result;
+        return SymptomCategory.Other;
+    }
+
+    public static SymptomDiaryEntryDto ToSymptomDiaryEntryDto(SymptomDiaryEntry entry) => new(
+        entry.Id,
+        entry.SheetId,
+        entry.Date,
+        entry.RecordedAt,
+        entry.Category.ToString(),
+        entry.SymptomName,
+        entry.PainType,
+        entry.BodyLocation,
+        entry.Severity,
+        entry.DurationMinutes,
+        entry.Triggers,
+        entry.Relievers,
+        entry.MedicationsTaken,
+        entry.Notes,
+        entry.Source,
+        entry.CreatedAt,
+        entry.UpdatedAt
+    );
+
+    public static SymptomDiarySheetDto ToSymptomDiarySheetDto(SymptomDiarySheet sheet)
+    {
+        var entries = sheet.Entries.OrderByDescending(x => x.RecordedAt).Select(ToSymptomDiaryEntryDto).ToList();
+        var avg = entries.Count > 0 ? (double?)Math.Round(entries.Average(x => x.Severity), 1) : null;
+        var max = entries.Count > 0 ? (int?)entries.Max(x => x.Severity) : null;
+        return new(
+            sheet.Id,
+            sheet.Date,
+            sheet.OverallWellbeing,
+            sheet.SleepQuality,
+            sheet.SleepHours,
+            sheet.DailyNotes,
+            entries.Count,
+            avg,
+            max,
+            entries,
+            sheet.CreatedAt,
+            sheet.UpdatedAt
+        );
+    }
+
+    public static SymptomDiarySheetSummaryDto ToSymptomDiarySheetSummaryDto(SymptomDiarySheet sheet)
+    {
+        var entries = sheet.Entries.ToList();
+        var avg = entries.Count > 0 ? (double?)Math.Round(entries.Average(x => x.Severity), 1) : null;
+        var max = entries.Count > 0 ? (int?)entries.Max(x => x.Severity) : null;
+        var main = entries.Select(x => x.SymptomName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().Take(4).ToArray();
+        return new(
+            sheet.Id,
+            sheet.Date,
+            sheet.OverallWellbeing,
+            sheet.SleepQuality,
+            sheet.SleepHours,
+            entries.Count,
+            avg,
+            max,
+            main
+        );
+    }
+
+    public static BotApiKeyDto ToBotApiKeyDto(UserBotApiKey key) => new(
+        key.Id,
+        key.KeyPrefix,
+        key.Label,
+        key.IsActive,
+        key.CreatedAt,
+        key.LastUsedAt
+    );
 }
+

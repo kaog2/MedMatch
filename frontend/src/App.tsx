@@ -14,6 +14,7 @@ import ClinicPatientSearch from './pages/ClinicPatientSearch';
 import PeopleSearch from './pages/PeopleSearch';
 import Matches from './pages/Matches';
 import AdminPortal from './pages/AdminPortal';
+import SymptomDiary from './pages/SymptomDiary';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/review/:clinicId" element={<WriteReview />} />
           <Route path="/recommend" element={<RecommendProvider />} />
           <Route path="/profile" element={<PatientProfile />} />
+          <Route path="/diary" element={<SymptomDiary />} />
           <Route path="/people" element={<PeopleSearch />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/admin" element={<AdminPortal />} />

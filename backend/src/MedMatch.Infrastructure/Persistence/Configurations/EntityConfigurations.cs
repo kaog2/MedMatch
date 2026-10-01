@@ -138,3 +138,53 @@ public sealed class UserRoleAssignmentConfiguration : IEntityTypeConfiguration<U
         builder.HasIndex(x => x.Role);
     }
 }
+
+public sealed class SymptomDiarySheetConfiguration : IEntityTypeConfiguration<SymptomDiarySheet>
+{
+    public void Configure(EntityTypeBuilder<SymptomDiarySheet> builder)
+    {
+        builder.ToTable("symptom_diary_sheets");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.DailyNotes).HasMaxLength(2000);
+        builder.Property(x => x.SleepHours).HasPrecision(4, 1);
+        builder.HasOne(x => x.User).WithMany(x => x.SymptomDiarySheets).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.Entries).WithOne(x => x.Sheet).HasForeignKey(x => x.SheetId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.UserId, x.Date }).IsUnique();
+    }
+}
+
+public sealed class SymptomDiaryEntryConfiguration : IEntityTypeConfiguration<SymptomDiaryEntry>
+{
+    public void Configure(EntityTypeBuilder<SymptomDiaryEntry> builder)
+    {
+        builder.ToTable("symptom_diary_entries");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(40);
+        builder.Property(x => x.SymptomName).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.PainType).HasMaxLength(200);
+        builder.Property(x => x.BodyLocation).HasMaxLength(200);
+        builder.Property(x => x.Triggers).HasMaxLength(500);
+        builder.Property(x => x.Relievers).HasMaxLength(500);
+        builder.Property(x => x.MedicationsTaken).HasMaxLength(500);
+        builder.Property(x => x.Notes).HasMaxLength(3000);
+        builder.Property(x => x.Source).HasMaxLength(50).IsRequired();
+        builder.HasOne(x => x.User).WithMany(x => x.SymptomDiaryEntries).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.UserId, x.Date });
+        builder.HasIndex(x => x.Category);
+    }
+}
+
+public sealed class UserBotApiKeyConfiguration : IEntityTypeConfiguration<UserBotApiKey>
+{
+    public void Configure(EntityTypeBuilder<UserBotApiKey> builder)
+    {
+        builder.ToTable("user_bot_api_keys");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.KeyHash).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.KeyPrefix).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Label).HasMaxLength(100).IsRequired();
+        builder.HasOne(x => x.User).WithMany(x => x.BotApiKeys).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.KeyHash).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.IsActive });
+    }
+}
