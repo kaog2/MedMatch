@@ -4,6 +4,7 @@ public enum UserRole { Patient, Clinic, Doctor, Admin }
 public enum DisplayMode { Anonymous, Pseudonym, RealName }
 public enum CareProviderType { Clinic, MedicalPractice, Doctor, Therapist, Hospital, Other }
 public enum RecommendationStatus { Pending, Approved, Rejected }
+public enum SymptomCategory { Pain, Fatigue, Neurological, Musculoskeletal, Digestive, MentalMood, Respiratory, Sleep, Other }
 
 public sealed class User
 {
@@ -23,6 +24,9 @@ public sealed class User
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; } = new List<EmailVerificationToken>();
     public ICollection<Recommendation> Recommendations { get; set; } = new List<Recommendation>();
+    public ICollection<SymptomDiarySheet> SymptomDiarySheets { get; set; } = new List<SymptomDiarySheet>();
+    public ICollection<SymptomDiaryEntry> SymptomDiaryEntries { get; set; } = new List<SymptomDiaryEntry>();
+    public ICollection<UserBotApiKey> BotApiKeys { get; set; } = new List<UserBotApiKey>();
 }
 
 public sealed class EmailVerificationToken
@@ -237,4 +241,66 @@ public sealed class UserRoleAssignment
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public UserRole Role { get; set; }
+}
+
+/// <summary>
+/// A patient's daily symptom diary sheet representing one full day of tracking.
+/// </summary>
+public sealed class SymptomDiarySheet
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public DateOnly Date { get; set; }
+    public int? OverallWellbeing { get; set; } // 1 (Poor) to 5 (Excellent)
+    public int? SleepQuality { get; set; } // 1 (Poor) to 5 (Restful)
+    public decimal? SleepHours { get; set; } // e.g. 7.5
+    public string? DailyNotes { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public ICollection<SymptomDiaryEntry> Entries { get; set; } = new List<SymptomDiaryEntry>();
+}
+
+/// <summary>
+/// A specific pain or symptom log entry recorded on a daily sheet.
+/// Open for many pain qualities and all non-pain symptoms.
+/// </summary>
+public sealed class SymptomDiaryEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid SheetId { get; set; }
+    public SymptomDiarySheet Sheet { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public DateOnly Date { get; set; }
+    public DateTimeOffset RecordedAt { get; set; } = DateTimeOffset.UtcNow;
+    public SymptomCategory Category { get; set; } = SymptomCategory.Pain;
+    public string SymptomName { get; set; } = string.Empty;
+    public string? PainType { get; set; } // e.g. "Sharp, Throbbing"
+    public string? BodyLocation { get; set; } // e.g. "Lower Back (LWS)"
+    public int Severity { get; set; } // 0 (None) to 10 (Worst possible)
+    public int? DurationMinutes { get; set; }
+    public string? Triggers { get; set; }
+    public string? Relievers { get; set; }
+    public string? MedicationsTaken { get; set; }
+    public string? Notes { get; set; }
+    public string Source { get; set; } = "Web"; // "Web", "ChatBot", "n8n"
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>
+/// An API key for automated chatbot / n8n logging on behalf of a patient.
+/// </summary>
+public sealed class UserBotApiKey
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public string KeyHash { get; set; } = string.Empty;
+    public string KeyPrefix { get; set; } = string.Empty;
+    public string Label { get; set; } = "n8n Bot";
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastUsedAt { get; set; }
 }

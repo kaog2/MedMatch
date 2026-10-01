@@ -23,6 +23,9 @@ public sealed class MedMatchDbContext(DbContextOptions<MedMatchDbContext> option
     public DbSet<RecommendationClinic> RecommendationClinics => Set<RecommendationClinic>();
     public DbSet<RecommendationDiagnosisTag> RecommendationDiagnosisTags => Set<RecommendationDiagnosisTag>();
     public DbSet<UserRoleAssignment> UserRoles => Set<UserRoleAssignment>();
+    public DbSet<SymptomDiarySheet> SymptomDiarySheets => Set<SymptomDiarySheet>();
+    public DbSet<SymptomDiaryEntry> SymptomDiaryEntries => Set<SymptomDiaryEntry>();
+    public DbSet<UserBotApiKey> UserBotApiKeys => Set<UserBotApiKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
