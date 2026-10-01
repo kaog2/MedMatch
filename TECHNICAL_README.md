@@ -190,6 +190,20 @@ The JWT secret must be at least 16 bytes for HS256. Use a substantially longer r
 
 All application endpoints are under `/api`.
 
+### Symptom diary and bot API
+
+Patient web routes under `/api/symptom-diary` use the signed-in patient's identity. Bot routes under `/api/bot` accept a patient-scoped `X-API-Key` created in the diary's Bot settings; every read and write is restricted to the patient that owns the key. n8n should use the API rather than direct database access.
+
+| Method | Route | Behavior |
+| --- | --- | --- |
+| `POST` | `/api/bot/symptom-entries` | Create an entry; optional `date` and `recordedAt` allow backdated records. |
+| `GET` | `/api/bot/symptom-entries?date=YYYY-MM-DD` | List only the authenticated patient's entries for the requested calendar date. |
+| `PATCH` | `/api/bot/symptom-entries/{id}` | Update only supplied fields on an entry owned by the authenticated patient; omitted fields are preserved. Optional `date` moves it to that day's sheet. |
+| `GET` | `/api/bot/symptom-entries/today` | Read today's sheet (legacy convenience route). |
+| `POST` | `/api/bot/symptom-entries/quick-text` | Save a free-text entry; optional `date` allows backdating. |
+
+The Telegram assistant should use the date-list route to locate a record, show its date/symptom/severity and proposed changes, and wait for the user's explicit confirmation before calling `PATCH`. Use the entry ID from the list, never an ID supplied by user text. `PATCH` changes only supplied fields, preserving omitted fields; empty strings clear optional text fields when explicitly requested. Date moves update the entry's daily-sheet relationship as well as its date. Do not execute live diary writes as workflow tests.
+
 ### Authentication
 
 | Method | Route | Access |
