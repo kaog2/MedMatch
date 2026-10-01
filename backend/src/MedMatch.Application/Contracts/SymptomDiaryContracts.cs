@@ -86,6 +86,21 @@ public record BotLogSymptomRequest(
     string? Source
 );
 
+public record BotUpdateSymptomEntryRequest(
+    DateOnly? Date,
+    DateTimeOffset? RecordedAt,
+    string? Category,
+    string? SymptomName,
+    string? PainType,
+    string? BodyLocation,
+    int? Severity,
+    int? DurationMinutes,
+    string? Triggers,
+    string? Relievers,
+    string? MedicationsTaken,
+    string? Notes
+);
+
 public record BotQuickLogTextRequest(
     string Text,
     DateOnly? Date
