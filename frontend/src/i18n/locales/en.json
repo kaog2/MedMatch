@@ -118,6 +118,8 @@
     "specialty": "Specialty or therapy",
     "specialtyPlaceholder": "e.g. orthopedics",
     "cityPlaceholder": "e.g. Berlin",
+    "allCities": "All cities",
+    "allCountries": "All countries",
     "treatment": "Treatment or experience",
     "treatmentPlaceholder": "e.g. pain therapy",
     "search": "Search care",

@@ -118,6 +118,8 @@
     "specialty": "Fachgebiet oder Therapie",
     "specialtyPlaceholder": "z. B. Orthopädie",
     "cityPlaceholder": "z. B. Berlin",
+    "allCities": "Alle Städte",
+    "allCountries": "Alle Länder",
     "treatment": "Behandlung oder Erfahrung",
     "treatmentPlaceholder": "z. B. Schmerztherapie",
     "search": "Versorgung suchen",
