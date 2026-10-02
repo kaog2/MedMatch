@@ -13,11 +13,13 @@ public static class ProfileEndpoints
 {
     public static RouteGroupBuilder MapProfileEndpoints(this RouteGroupBuilder api)
     {
+        // GET /api/profile: returns the signed-in user's patient profile.
         api.MapGet("/profile", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var profile = await db.PatientProfiles.FindAsync([UserId(principal)], ct); return profile is null ? Results.NotFound() : Results.Ok(ToProfileDto(profile));
         }).RequireAuthorization();
 
+        // PUT /api/profile: updates the profile and diagnosis tags, then recomputes matches (Patient).
         api.MapPut("/profile", async (PatientProfileDto dto, ClaimsPrincipal principal, MedMatchDbContext db, IConfiguration configuration, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -32,11 +34,13 @@ public static class ProfileEndpoints
             return Results.Ok(ToProfileDto(profile));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/consent: returns the signed-in user's consent settings.
         api.MapGet("/consent", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var settings = await db.ConsentSettings.FindAsync([UserId(principal)], ct); return settings is null ? Results.NotFound() : Results.Ok(ToConsentDto(settings));
         }).RequireAuthorization();
 
+        // PUT /api/consent: updates consent flags with an audit trail, then recomputes matches.
         api.MapPut("/consent", async (ConsentSettingsDto dto, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal); var settings = await db.ConsentSettings.FindAsync([userId], ct); if (settings is null) return Results.NotFound();

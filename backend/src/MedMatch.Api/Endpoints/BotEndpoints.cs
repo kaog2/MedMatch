@@ -16,6 +16,7 @@ public static class BotEndpoints
     {
         var botApi = api.MapGroup("/bot").AllowAnonymous();
 
+        // POST /api/bot/symptom-entries: logs a symptom entry for the key owner; date and recordedAt allow backdating.
         botApi.MapPost("/symptom-entries", async (BotLogSymptomRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
@@ -60,6 +61,7 @@ public static class BotEndpoints
             return Results.Created($"/api/symptom-diary/entries/{entry.Id}", ToSymptomDiaryEntryDto(entry));
         });
 
+        // GET /api/bot/symptom-entries/today: returns today's sheet for the key owner.
         botApi.MapGet("/symptom-entries/today", async (HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
@@ -93,6 +95,7 @@ public static class BotEndpoints
             return Results.Ok(ToSymptomDiarySheetDto(sheet));
         });
 
+        // GET /api/bot/symptom-entries?date=YYYY-MM-DD: lists the key owner's entries for one date.
         botApi.MapGet("/symptom-entries", async (DateOnly? date, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
@@ -111,6 +114,7 @@ public static class BotEndpoints
             return Results.Ok(entries.Select(ToSymptomDiaryEntryDto));
         });
 
+        // PATCH /api/bot/symptom-entries/{id}: changes only the supplied fields of an owned entry; date moves it.
         botApi.MapPatch("/symptom-entries/{id:guid}", async (Guid id, BotUpdateSymptomEntryRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);
@@ -181,6 +185,7 @@ public static class BotEndpoints
             return Results.Ok(ToSymptomDiaryEntryDto(entry));
         });
 
+        // POST /api/bot/symptom-entries/quick-text: saves free text as a default-severity entry.
         botApi.MapPost("/symptom-entries/quick-text", async (BotQuickLogTextRequest request, HttpContext context, ClaimsPrincipal principal, MedMatchDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var user = await ResolveBotOrUserAsync(context, principal, db, logger, ct);

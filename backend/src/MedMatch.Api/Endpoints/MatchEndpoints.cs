@@ -15,6 +15,7 @@ public static class MatchEndpoints
 {
     public static RouteGroupBuilder MapMatchEndpoints(this RouteGroupBuilder api)
     {
+        // GET /api/matches: ranks consenting peers by shared diagnoses, symptoms and location (Patient).
         api.MapGet("/matches", async (string? country, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -74,6 +75,7 @@ public static class MatchEndpoints
             return Results.Ok(matches);
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/matches/summary: returns the unread match notification count (Patient).
         api.MapGet("/matches/summary", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var currentUserId = UserId(principal);
@@ -81,6 +83,7 @@ public static class MatchEndpoints
             return Results.Ok(new MatchSummaryDto(unread));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/matches/notifications: lists the caller's match notifications, newest first (Patient).
         api.MapGet("/matches/notifications", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var currentUserId = UserId(principal);
@@ -90,6 +93,7 @@ public static class MatchEndpoints
             return Results.Ok(notifications.Select(x => new MatchNotificationDto(x.Id, x.MatchedUserId, profiles.TryGetValue(x.MatchedUserId, out var p) ? DisplayName(p) : "MedMatch member", x.SharedDiagnoses, x.Score, x.IsRead, x.CreatedAt)));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // POST /api/matches/notifications/read: marks one or all notifications as read (Patient).
         api.MapPost("/matches/notifications/read", async (Guid? id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var currentUserId = UserId(principal);

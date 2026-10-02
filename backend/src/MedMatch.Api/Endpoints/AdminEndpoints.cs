@@ -15,6 +15,7 @@ public static class AdminEndpoints
 {
     public static RouteGroupBuilder MapAdminEndpoints(this RouteGroupBuilder api)
     {
+        // GET /api/admin/users: pages through users with search and role filters (Admin).
         api.MapGet("/admin/users", async (string? search, string? role, int? page, int? pageSize, MedMatchDbContext db, CancellationToken ct) =>
         {
             var query = db.Users.Include(x => x.PatientProfile).Include(x => x.ConsentSettings).Include(x => x.Roles).AsNoTracking().AsQueryable();
@@ -60,6 +61,7 @@ public static class AdminEndpoints
             return Results.Ok(new { total, page = currentPage, pageSize = size, items = result });
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+        // GET /api/admin/users/{id}/matches: shows the peer matches computed for a user (Admin).
         api.MapGet("/admin/users/{id:guid}/matches", async (Guid id, MedMatchDbContext db, CancellationToken ct) =>
         {
             var target = await db.PatientProfiles
@@ -100,6 +102,7 @@ public static class AdminEndpoints
             return Results.Ok(matches);
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+        // POST /api/admin/users/{id}/active: activates or deactivates a user, keeping one active admin (Admin).
         api.MapPost("/admin/users/{id:guid}/active", async (Guid id, UpdateActiveRequest request, MedMatchDbContext db, CancellationToken ct) =>
         {
             var user = await db.Users.Include(x => x.Roles).SingleOrDefaultAsync(x => x.Id == id, ct);
@@ -118,6 +121,7 @@ public static class AdminEndpoints
             return Results.Ok(new { id = user.Id, isActive = user.IsActive });
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+        // POST /api/admin/users/{id}/role: grants or revokes a role, protecting the last admin (Admin).
         api.MapPost("/admin/users/{id:guid}/role", async (Guid id, UpdateRoleRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             if (!Enum.TryParse<UserRole>(request.Role, true, out var role))

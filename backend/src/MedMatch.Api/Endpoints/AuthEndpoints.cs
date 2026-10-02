@@ -5,8 +5,10 @@ namespace MedMatch.Api.Endpoints;
 
 public static class AuthEndpoints
 {
+    /// <summary>Authentication endpoints for user registration, login, token refresh, and email verification.</summary>
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder api)
     {
+        // POST /api/auth/register: creates a patient account and sends the email verification link.
         api.MapPost("/auth/register", async (RegisterRequest request, IAuthService auth, ILogger<Program> logger, CancellationToken ct) =>
         {
             try
@@ -20,6 +22,7 @@ public static class AuthEndpoints
             catch (InvalidOperationException exception) { return Results.Conflict(new { error = exception.Message }); }
         }).AllowAnonymous();
 
+        // POST /api/auth/login: validates credentials and returns access and refresh tokens.
         api.MapPost("/auth/login", async (LoginRequest request, IAuthService auth, ILogger<Program> logger, CancellationToken ct) =>
         {
             try
@@ -43,12 +46,15 @@ public static class AuthEndpoints
             }
         }).AllowAnonymous();
 
+        // POST /api/auth/refresh: exchanges a refresh token for a new token pair.
         api.MapPost("/auth/refresh", async (RefreshRequest request, IAuthService auth, CancellationToken ct) =>
             (await auth.RefreshAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
 
+        // POST /api/auth/google: signs in or registers with a validated Google ID token.
         api.MapPost("/auth/google", async (GoogleLoginRequest request, IAuthService auth, CancellationToken ct) =>
             (await auth.LoginWithGoogleAsync(request, ct)) is { } response ? Results.Ok(response) : Results.Unauthorized()).AllowAnonymous();
 
+        // POST /api/auth/verify-email: confirms an email address using a one-time token.
         api.MapPost("/auth/verify-email", async (VerifyEmailRequest request, IAuthService auth, CancellationToken ct) =>
             await auth.VerifyEmailAsync(request, ct) ? Results.Ok(new { verified = true }) : Results.BadRequest(new { error = "This verification link is invalid or expired." })).AllowAnonymous();
 

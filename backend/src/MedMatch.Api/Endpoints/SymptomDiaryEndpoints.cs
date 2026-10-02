@@ -17,6 +17,7 @@ public static class SymptomDiaryEndpoints
     {
         var diaryApi = api.MapGroup("/symptom-diary").RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/symptom-diary/sheets: lists daily sheet summaries in a date range, default last 30 days.
         diaryApi.MapGet("/sheets", async (DateOnly? startDate, DateOnly? endDate, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -33,6 +34,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(sheets.Select(ToSymptomDiarySheetSummaryDto));
         });
 
+        // GET /api/symptom-diary/sheets/{date}: returns one day's sheet with its entries, or an empty sheet.
         diaryApi.MapGet("/sheets/{date}", async (DateOnly date, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -62,6 +64,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(ToSymptomDiarySheetDto(sheet));
         });
 
+        // PUT /api/symptom-diary/sheets/{date}: creates or updates a day's wellbeing, sleep and notes.
         diaryApi.MapPut("/sheets/{date}", async (DateOnly date, UpdateDailySheetRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -95,6 +98,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(ToSymptomDiarySheetDto(sheet));
         });
 
+        // POST /api/symptom-diary/sheets/{date}/entries: adds a symptom entry to a day, including past dates.
         diaryApi.MapPost("/sheets/{date}/entries", async (DateOnly date, UpsertSymptomEntryRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.SymptomName))
@@ -135,6 +139,7 @@ public static class SymptomDiaryEndpoints
             return Results.Created($"/api/symptom-diary/entries/{entry.Id}", ToSymptomDiaryEntryDto(entry));
         });
 
+        // PUT /api/symptom-diary/entries/{id}: replaces the editable fields of the caller's entry.
         diaryApi.MapPut("/entries/{id:guid}", async (Guid id, UpsertSymptomEntryRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.SymptomName))
@@ -163,6 +168,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(ToSymptomDiaryEntryDto(entry));
         });
 
+        // DELETE /api/symptom-diary/entries/{id}: deletes the caller's entry.
         diaryApi.MapDelete("/entries/{id:guid}", async (Guid id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -174,6 +180,7 @@ public static class SymptomDiaryEndpoints
             return Results.NoContent();
         });
 
+        // GET /api/symptom-diary/summary: returns severity trend and top symptoms, locations and pain types.
         diaryApi.MapGet("/summary", async (int? days, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -250,6 +257,7 @@ public static class SymptomDiaryEndpoints
             ));
         });
 
+        // GET /api/symptom-diary/bot-key: returns metadata of the active bot API key, never the secret.
         diaryApi.MapGet("/bot-key", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -261,6 +269,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(key is null ? null : ToBotApiKeyDto(key));
         });
 
+        // POST /api/symptom-diary/bot-key: issues a new bot API key, revoking the previous one; shown once.
         diaryApi.MapPost("/bot-key", async (CreateBotKeyRequest? request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -283,6 +292,7 @@ public static class SymptomDiaryEndpoints
             return Results.Ok(new CreateBotKeyResponse(key.Id, rawKey, prefix, key.Label, key.CreatedAt));
         });
 
+        // DELETE /api/symptom-diary/bot-key/{id}: revokes a bot API key.
         diaryApi.MapDelete("/bot-key/{id:guid}", async (Guid id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);

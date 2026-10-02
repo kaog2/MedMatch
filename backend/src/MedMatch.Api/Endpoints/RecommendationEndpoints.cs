@@ -16,6 +16,7 @@ public static class RecommendationEndpoints
 {
     public static RouteGroupBuilder MapRecommendationEndpoints(this RouteGroupBuilder api)
     {
+        // POST /api/recommendations: submits a provider recommendation; moderation decides its status (Patient).
         api.MapPost("/recommendations", async (CreateRecommendationRequest request, ClaimsPrincipal principal, MedMatchDbContext db, IContentModerationService moderation, IConfiguration configuration, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -68,6 +69,7 @@ public static class RecommendationEndpoints
             return Results.Created($"/api/recommendations/{created!.Id}", ToRecommendationDto(created));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/recommendations: lists approved recommendations, filtered by provider or diagnosis.
         api.MapGet("/recommendations", async (Guid? clinicId, string? diagnosis, MedMatchDbContext db, CancellationToken ct) =>
         {
             var query = db.Recommendations
@@ -90,6 +92,7 @@ public static class RecommendationEndpoints
             return Results.Ok(recommendations.Select(ToRecommendationDto));
         }).AllowAnonymous();
 
+        // GET /api/recommendations/mine: lists the caller's own recommendations in any status (Patient).
         api.MapGet("/recommendations/mine", async (ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);
@@ -102,6 +105,7 @@ public static class RecommendationEndpoints
             return Results.Ok(recommendations.Select(ToRecommendationDto));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // GET /api/admin/recommendations: lists all recommendations, optionally by status (Admin).
         api.MapGet("/admin/recommendations", async (string? status, MedMatchDbContext db, CancellationToken ct) =>
         {
             var query = db.Recommendations
@@ -117,6 +121,7 @@ public static class RecommendationEndpoints
             return Results.Ok(recommendations.Select(ToRecommendationDto));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+        // POST /api/admin/recommendations/{id}/moderate: approves or rejects a recommendation (Admin).
         api.MapPost("/admin/recommendations/{id:guid}/moderate", async (Guid id, ModerateRecommendationRequest request, MedMatchDbContext db, CancellationToken ct) =>
         {
             var recommendation = await db.Recommendations.SingleOrDefaultAsync(x => x.Id == id, ct);
@@ -128,6 +133,7 @@ public static class RecommendationEndpoints
             return Results.Ok(new { id = recommendation.Id, status = recommendation.Status.ToString(), moderationNote = recommendation.ModerationNote });
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
 
+        // DELETE /api/recommendations/{id}: deletes a recommendation by its author or an admin (Patient, Admin).
         api.MapDelete("/recommendations/{id:guid}", async (Guid id, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var userId = UserId(principal);

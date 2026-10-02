@@ -12,6 +12,7 @@ public static class TaxonomyEndpoints
 {
     public static RouteGroupBuilder MapTaxonomyEndpoints(this RouteGroupBuilder api)
     {
+        // GET /api/diagnosis-tags/suggest: autocompletes diagnosis tags, localized to the Accept-Language culture.
         api.MapGet("/diagnosis-tags/suggest", async (string? q, HttpContext context, MedMatchDbContext db, CancellationToken ct) =>
         {
             var culture = PreferredCulture(context);
@@ -24,6 +25,7 @@ public static class TaxonomyEndpoints
             return Results.Ok(tags.Select(x => ToDiagnosisTagDto(x, culture)));
         }).RequireAuthorization();
 
+        // POST /api/translate: translates one text for display into en, es, de or it.
         api.MapPost("/translate", async (TranslateRequest request, ITranslationService translator, CancellationToken ct) =>
         {
             var text = (request.Text ?? string.Empty).Trim();
@@ -39,6 +41,7 @@ public static class TaxonomyEndpoints
             return translated is null ? Results.StatusCode(StatusCodes.Status503ServiceUnavailable) : Results.Ok(new TranslateResponse(translated));
         }).AllowAnonymous();
 
+        // POST /api/translate/batch: translates up to 50 texts for display in one call.
         api.MapPost("/translate/batch", async (TranslateBatchRequest request, ITranslationService translator, CancellationToken ct) =>
         {
             var texts = request.Texts?

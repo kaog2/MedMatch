@@ -14,12 +14,14 @@ public static class PatientDiscoveryEndpoints
 {
     public static RouteGroupBuilder MapPatientDiscoveryEndpoints(this RouteGroupBuilder api)
     {
+        // GET /api/clinic/patients: searches patients who consented to clinic contact and data search (Clinic).
         api.MapGet("/clinic/patients", async (string? diagnosis, string? symptom, MedMatchDbContext db, CancellationToken ct) =>
         {
             var profiles = await db.PatientProfiles.Include(x => x.User).ThenInclude(x => x.ConsentSettings).Where(x => x.User.ConsentSettings!.ClinicsContactMe && x.User.ConsentSettings.DataForSearch).AsNoTracking().ToListAsync(ct);
             return Results.Ok(profiles.Where(x => string.IsNullOrWhiteSpace(diagnosis) || x.Diagnoses.Any(v => v.Contains(diagnosis, StringComparison.OrdinalIgnoreCase))).Where(x => string.IsNullOrWhiteSpace(symptom) || (x.Symptoms ?? "").Contains(symptom, StringComparison.OrdinalIgnoreCase)).Select(x => new { x.City, x.Country, x.Diagnoses, x.Interventions, x.Symptoms }));
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Clinic" });
 
+        // GET /api/people: searches consenting patients by diagnosis, symptom or city (Patient).
         api.MapGet("/people", async (string? diagnosis, string? symptom, string? city, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var currentUserId = UserId(principal);
@@ -41,6 +43,7 @@ public static class PatientDiscoveryEndpoints
             return Results.Ok(matches);
         }).RequireAuthorization(new AuthorizeAttribute { Roles = "Patient" });
 
+        // POST /api/people/{id}/connection-requests: sends a connection request to a consenting patient (Patient).
         api.MapPost("/people/{id:guid}/connection-requests", async (Guid id, ConnectionRequest request, ClaimsPrincipal principal, MedMatchDbContext db, CancellationToken ct) =>
         {
             var senderId = UserId(principal);
