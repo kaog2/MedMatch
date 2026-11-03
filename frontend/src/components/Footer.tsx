@@ -1,13 +1,26 @@
 import { Box, Container, Divider, Stack, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
-
-const legalLinks = [
-  { label: 'Política de Privacidad', to: '/privacy' },
-  { label: 'Términos y Condiciones', to: '/terms' },
-  { label: 'Aviso Legal', to: '/legal' },
-] as const;
+import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
+  const { t, i18n } = useTranslation();
+  const isDe = Boolean(i18n.language && i18n.language.startsWith('de'));
+
+  const legalLinks = [
+    {
+      label: isDe ? 'Datenschutzerklärung' : t('footer.privacy', { defaultValue: 'Política de Privacidad' }),
+      to: isDe ? '/datenschutz' : '/privacy',
+    },
+    {
+      label: isDe ? 'Nutzungsbedingungen (AGB)' : t('footer.terms', { defaultValue: 'Términos y Condiciones' }),
+      to: isDe ? '/agb' : '/terms',
+    },
+    {
+      label: isDe ? 'Impressum' : t('footer.legal', { defaultValue: 'Aviso Legal' }),
+      to: isDe ? '/impressum' : '/legal',
+    },
+  ];
+
   return (
     <Box
       component="footer"
@@ -71,14 +84,14 @@ export default function Footer() {
             fontSize: '.78rem',
             lineHeight: 1.6,
             textAlign: 'center',
-            maxWidth: 700,
+            maxWidth: 750,
             mx: 'auto',
             mb: 2,
           }}
         >
-          MedMatch no provee servicios médicos, diagnósticos ni tratamientos. Las conexiones entre
-          usuarios y las recomendaciones de centros no sustituyen la opinión de un profesional de
-          la salud.
+          {isDe
+            ? 'MedMatch erbringt keine medizinischen Leistungen, Diagnosen oder Behandlungen. Der Austausch zwischen Nutzern und die Empfehlungen von Fachzentren ersetzen keinesfalls die professionelle ärztliche Beratung oder Behandlung. In Notfällen wenden Sie sich bitte sofort an den Notruf (112).'
+            : 'MedMatch no provee servicios médicos, diagnósticos ni tratamientos. Las conexiones entre usuarios y las recomendaciones de centros no sustituyen la opinión de un profesional de la salud.'}
         </Typography>
 
         {/* ── Copyright ── */}
@@ -89,10 +102,9 @@ export default function Footer() {
             textAlign: 'center',
           }}
         >
-          © {new Date().getFullYear()} MedMatch. Todos los derechos reservados.
+          © {new Date().getFullYear()} MedMatch. {isDe ? 'Alle Rechte vorbehalten.' : 'Todos los derechos reservados.'}
         </Typography>
       </Container>
     </Box>
   );
 }
-

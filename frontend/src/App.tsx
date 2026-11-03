@@ -43,6 +43,9 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfUse />} />
           <Route path="/legal" element={<LegalNotice />} />
+          <Route path="/datenschutz" element={<PrivacyPolicy defaultJurisdiction="de" />} />
+          <Route path="/agb" element={<TermsOfUse defaultJurisdiction="de" />} />
+          <Route path="/impressum" element={<LegalNotice defaultJurisdiction="de" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Container>
