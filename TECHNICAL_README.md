@@ -131,11 +131,22 @@ MedMatch.Infrastructure/
   Persistence/                        # EF Core context, mappings, migrations
 
 MedMatch.Api/
-  Program.cs                          # Composition root and route registration
-  Mapping/DtoMapper.cs                 # Entity/DTO conversions
+  Program.cs                          # Short composition root: services, pipeline, seeding, routes
+  Endpoints/                          # One file per feature area, mapped by MapMedMatchEndpoints
+    AuthEndpoints.cs                  # Register, login, refresh, Google, email verification
+    ProfileEndpoints.cs               # Patient profile and consent
+    CareProviderEndpoints.cs          # Clinics, doctors, reviews
+    RecommendationEndpoints.cs        # Recommendations and admin moderation
+    PatientDiscoveryEndpoints.cs      # Clinic patient search, people directory, connection requests
+    MatchEndpoints.cs                 # Peer matches and notifications
+    TaxonomyEndpoints.cs              # Diagnosis tag suggestions and translation
+    AdminEndpoints.cs                 # Administrator user management
+    SymptomDiaryEndpoints.cs          # Patient diary and bot API key management
+    BotEndpoints.cs                   # API-key authenticated n8n/chatbot endpoints
+  Configuration/                      # AddMedMatchServices, UseMedMatchPipeline, database initialization
+  Mapping/DtoMapper.cs                # Entity/DTO conversions
   Queries/ReviewQueries.cs            # Reusable review query construction
-  Security/UserIdentity.cs             # Claims-to-user identity handling
-  Configuration/ConfigurationExtensions.cs
+  Security/UserIdentity.cs            # Claims-to-user identity handling
 ```
 
 Dependencies point inward: the Application project defines service contracts, Infrastructure implements them, and the API composes them through dependency injection. Authentication no longer creates users, hashes passwords, or issues tokens inside `Program.cs`.
