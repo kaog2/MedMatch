@@ -15,6 +15,10 @@ import PeopleSearch from './pages/PeopleSearch';
 import Matches from './pages/Matches';
 import AdminPortal from './pages/AdminPortal';
 import SymptomDiary from './pages/SymptomDiary';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfUse from './pages/TermsOfUse';
+import LegalNotice from './pages/LegalNotice';
+import Footer from './components/Footer';
 
 export default function App() {
   return (
@@ -36,9 +40,13 @@ export default function App() {
           <Route path="/matches" element={<Matches />} />
           <Route path="/admin" element={<AdminPortal />} />
           <Route path="/clinic-patients" element={<ClinicPatientSearch />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfUse />} />
+          <Route path="/legal" element={<LegalNotice />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Container>
+      <Footer />
     </>
   );
 }
